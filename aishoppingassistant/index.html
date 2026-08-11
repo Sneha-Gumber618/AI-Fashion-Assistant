@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopAI — Aesthetic Fashion & AI Shopping Assistant</title>
+    <meta name="description" content="All your style here. Find the right product without the endless scrolling using AI personalized shopping assistant.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Announcement Ticker Bar -->
+    <div class="ticker-bar">
+        <div class="ticker-track">
+            <div class="ticker-item">
+                <span>✦ ALL YOUR STYLE HERE</span>
+                <span>✦ GET 20% OFF OFFER WITH CODE "STYLE20"</span>
+                <span>✦ AI-POWERED PERSONAL PRODUCT DISCOVERY</span>
+                <span>✦ PASTEL & AESTHETIC COLLECTION</span>
+            </div>
+            <div class="ticker-item">
+                <span>✦ ALL YOUR STYLE HERE</span>
+                <span>✦ GET 20% OFF OFFER WITH CODE "STYLE20"</span>
+                <span>✦ AI-POWERED PERSONAL PRODUCT DISCOVERY</span>
+                <span>✦ PASTEL & AESTHETIC COLLECTION</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Common Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-badge">✨</div>
+                Shop<span class="ai-text">AI</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="products.html" class="nav-link">Explore Products</a></li>
+                <li><a href="chat.html" class="nav-link">AI Assistant</a></li>
+                <li>
+                    <a href="cart.html" class="nav-link cart-link">
+                        🛒 <span class="cart-badge">Cart (0)</span>
+                    </a>
+                </li>
+            </ul>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('active')">☰</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section (Inspired directly by First Picture Sample) -->
+    <section class="hero-fashion-section container">
+        <div class="hero-split-canvas reveal-on-scroll">
+            
+            <!-- Oversized Background Watermark -->
+            <div class="hero-watermark">FASHION</div>
+
+            <!-- Left Hero Content -->
+            <div class="hero-left-content">
+                <div class="hero-tag-bubble">
+                    <span>💖 NEW ARRIVALS & TRENDS</span>
+                </div>
+                <h1 class="hero-main-title">
+                    ALL YOUR <br>
+                    STYLE HERE
+                </h1>
+                <p class="hero-main-subtitle">
+                    Your personal AI shopping assistant. Describe what you're looking for and get instant, tailored recommendations without endless scrolling.
+                </p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <a href="chat.html" class="btn btn-primary">
+                        ✨ Ask AI Stylist
+                    </a>
+                    <a href="products.html" class="btn btn-secondary">
+                        Explore Shop →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Speech Bubble Offer Badge (First Pic Feature) -->
+            <div class="hero-speech-offer">
+                <span>Special Offer</span>
+                <strong>20% OFF</strong>
+            </div>
+
+            <!-- Center Model Image Cutout -->
+            <div class="hero-center-model-container">
+                <img src="images/hero_model.jpg" alt="Fashion Model Shopping" onerror="this.src='https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop&q=80'">
+            </div>
+
+            <!-- Right Hero Content / Mini AI Assistant Showcase Card -->
+            <div class="hero-right-content">
+                <div class="hero-mini-showcase-card">
+                    <h4>🤖 ShopAI Recommendations</h4>
+                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">
+                        Real-time AI matching based on your budget & preference:
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="background: rgba(255,255,255,0.95); padding: 0.65rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem;">
+                            <img src="images/sunshield.jpg" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;">
+                            <div style="flex: 1;">
+                                <strong style="font-size: 0.85rem; color: var(--dark); display: block;">SunShield SPF 50</strong>
+                                <span style="font-size: 0.75rem; color: var(--primary); font-weight: 800;">₹449 • ⭐ 4.6</span>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.95); padding: 0.65rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem;">
+                            <img src="images/aerobeat.jpg" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;">
+                            <div style="flex: 1;">
+                                <strong style="font-size: 0.85rem; color: var(--dark); display: block;">AeroBeat Headphones</strong>
+                                <span style="font-size: 0.75rem; color: var(--primary); font-weight: 800;">₹2,499 • ⭐ 4.8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Bar (First Picture Style) -->
+        <div class="category-thumbnail-bar reveal-on-scroll">
+            <div class="category-thumbnail-grid">
+                <a href="products.html?category=Fashion" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">👗</div>
+                    <span class="cat-thumb-label">DRESS</span>
+                </a>
+                <a href="products.html?category=Fashion" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">👠</div>
+                    <span class="cat-thumb-label">SHOES</span>
+                </a>
+                <a href="products.html?category=Skincare" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">💄</div>
+                    <span class="cat-thumb-label">LIPSTICK</span>
+                </a>
+                <a href="products.html?category=Skincare" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">🧴</div>
+                    <span class="cat-thumb-label">MAKEUP</span>
+                </a>
+                <a href="products.html?category=Fashion" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">👕</div>
+                    <span class="cat-thumb-label">T-SHIRT</span>
+                </a>
+                <a href="products.html?category=Fashion" class="cat-thumb-item">
+                    <div class="cat-thumb-icon">🕶️</div>
+                    <span class="cat-thumb-label">SUNGLASS</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Best Selling Products Section -->
+    <section class="section container">
+        <div class="reveal-on-scroll" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 class="section-title" style="margin-bottom: 0.3rem;">OUR BEST SELLING PRODUCTS</h2>
+                <p class="section-subtitle">Top curated recommendations with actual high quality product photos</p>
+            </div>
+            <a href="products.html" class="btn btn-secondary btn-sm">See All Products →</a>
+        </div>
+
+        <div id="trending-grid" class="product-grid reveal-on-scroll">
+            <!-- Rendered dynamically by JavaScript with real product photos -->
+        </div>
+    </section>
+
+    <!-- Promotional Banner (First Picture Newsletter Feature) -->
+    <section class="container">
+        <div class="promo-newsletter-banner reveal-on-scroll">
+            <div class="promo-newsletter-text">
+                <h2>LET'S START SHOPPING</h2>
+                <p>Subscribe now to get instant AI recommendations and exclusive 20% discount vouchers sent straight to your inbox.</p>
+            </div>
+            <form class="subscribe-form" onsubmit="event.preventDefault(); showToast('🎉 Subscribed to ShopAI updates!');">
+                <input type="email" placeholder="Your mail address..." required>
+                <button type="submit">SUBSCRIBE</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-content">
+            <div>
+                <strong>ShopAI</strong> — Aesthetic AI-Powered Shopping Assistant Prototype
+            </div>
+            <div>
+                Frontend Evaluation Built with HTML, CSS, Vanilla JS & LocalStorage
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Dynamically render best-selling products using REAL IMAGES
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('trending-grid');
+            if (container && typeof getProducts === 'function') {
+                const allProducts = getProducts();
+                const bestSellers = allProducts.slice(0, 8);
+
+                container.innerHTML = bestSellers.map(p => `
+                    <div class="product-card">
+                        <div class="product-image-container">
+                            <span class="product-badge">${p.badge}</span>
+                            <img src="${p.image}" alt="${p.name}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'">
+                        </div>
+                        <div class="product-content">
+                            <span class="product-category">${p.category}</span>
+                            <h3 class="product-title">
+                                <a href="product.html?id=${p.id}">${p.name}</a>
+                            </h3>
+                            <div class="product-rating">
+                                <span class="stars">★ ${p.rating}</span>
+                                <span>(${p.reviews} reviews)</span>
+                            </div>
+                            <div class="product-footer">
+                                <span class="product-price">${formatCurrency(p.price)}</span>
+                                <button class="btn btn-primary btn-sm" onclick="addToCart(${p.id})">
+                                    + Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        });
+    </script>
+</body>
+</html>

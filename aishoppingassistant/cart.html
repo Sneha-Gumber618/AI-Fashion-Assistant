@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart — ShopAI</title>
+    <meta name="description" content="View items in your cart, update quantities, check delivery fee, and proceed to checkout.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Announcement Ticker Bar -->
+    <div class="ticker-bar">
+        <div class="ticker-track">
+            <div class="ticker-item">
+                <span>✦ SHOPPING CART & CHECKOUT</span>
+                <span>✦ FREE DELIVERY ON ORDERS OVER ₹999</span>
+                <span>✦ 100% PERSISTENT LOCALSTORAGE STATE</span>
+            </div>
+            <div class="ticker-item">
+                <span>✦ SHOPPING CART & CHECKOUT</span>
+                <span>✦ FREE DELIVERY ON ORDERS OVER ₹999</span>
+                <span>✦ 100% PERSISTENT LOCALSTORAGE STATE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Common Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-badge">✨</div>
+                Shop<span class="ai-text">AI</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="products.html" class="nav-link">Explore Products</a></li>
+                <li><a href="chat.html" class="nav-link">AI Assistant</a></li>
+                <li>
+                    <a href="cart.html" class="nav-link active cart-link">
+                        🛒 <span class="cart-badge">Cart (0)</span>
+                    </a>
+                </li>
+            </ul>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('active')">☰</button>
+        </div>
+    </nav>
+
+    <!-- Cart Main Content -->
+    <main class="container" style="padding-top: 2.5rem;">
+        <div class="reveal-on-scroll" style="margin-bottom: 2rem;">
+            <h1 class="section-title">Your Shopping Cart</h1>
+            <p class="section-subtitle">Review your selected items, manage quantities, and proceed to checkout</p>
+        </div>
+
+        <div class="cart-grid reveal-on-scroll reveal-scale">
+            <!-- Left: Items Container -->
+            <div id="cart-items-container" class="cart-table-card">
+                <!-- Populated dynamically by cart.js -->
+            </div>
+
+            <!-- Right: Order Summary Sidebar -->
+            <div id="cart-summary" class="summary-card">
+                <!-- Populated dynamically by cart.js -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-content">
+            <div>
+                <strong>ShopAI</strong> — Aesthetic AI-Powered Shopping Assistant Prototype
+            </div>
+            <div>
+                Frontend Evaluation Built with HTML, CSS, Vanilla JS & LocalStorage
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/cart.js"></script>
+</body>
+</html>
