@@ -5,6 +5,185 @@
 
 const CART_STORAGE_KEY = 'shopai_cart';
 
+function renderAuthUI() {
+    const navLinks = document.querySelector('.nav-links');
+    if (!navLinks) return;
+
+    let authItem = document.getElementById('auth-nav-item');
+    if (!authItem) {
+        authItem = document.createElement('li');
+        authItem.id = 'auth-nav-item';
+        authItem.className = 'auth-nav-item';
+        navLinks.appendChild(authItem);
+    }
+
+    const currentUser = getCurrentUser();
+
+    if (currentUser) {
+        authItem.innerHTML = `
+            <div class="auth-user-pill">
+                <span class="auth-user-name">👋 ${currentUser.name.split(' ')[0]}</span>
+                <button class="auth-logout-btn" id="logout-btn">Logout</button>
+            </div>
+        `;
+
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    } else {
+        authItem.innerHTML = `<button class="auth-trigger" id="auth-trigger-btn">🔐 Login / Sign Up</button>`;
+
+        const authBtn = document.getElementById('auth-trigger-btn');
+        if (authBtn) authBtn.addEventListener('click', () => showAuthModal('login'));
+    }
+}
+
+function createAuthModal() {
+    let modal = document.getElementById('auth-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'auth-modal';
+    modal.className = 'auth-modal';
+    modal.innerHTML = `
+        <div class="auth-modal-card">
+            <button class="auth-modal-close" id="auth-close-btn">✕</button>
+            <div class="auth-brand">✨ Welcome to ShopAI</div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-mode="login">Login</button>
+                <button class="auth-tab" data-mode="register">Register</button>
+            </div>
+            <form id="auth-form" class="auth-form" data-mode="login">
+                <input type="text" id="auth-name" name="name" placeholder="Your name" style="display: none;">
+                <input type="email" id="auth-email" name="email" placeholder="Email address" required>
+                <div class="auth-password-row">
+                    <input type="password" id="auth-password" name="password" placeholder="Password" required>
+                    <button type="button" class="password-toggle-btn" id="password-toggle-btn">Show</button>
+                </div>
+                <div class="auth-form-footer">
+                    <button type="button" class="auth-link-btn" id="forgot-password-btn">Forgot password?</button>
+                </div>
+                <button type="submit" class="btn btn-primary auth-submit-btn">Login</button>
+            </form>
+            <div id="auth-message" class="auth-message"></div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (event) => {
+        if (event.target.id === 'auth-modal') hideAuthModal();
+    });
+
+    document.getElementById('auth-close-btn').addEventListener('click', hideAuthModal);
+    document.querySelectorAll('.auth-tab').forEach((tab) => {
+        tab.addEventListener('click', () => setAuthMode(tab.dataset.mode));
+    });
+    document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
+    document.getElementById('password-toggle-btn').addEventListener('click', togglePasswordVisibility);
+    document.getElementById('forgot-password-btn').addEventListener('click', () => {
+        const email = document.getElementById('auth-email').value.trim();
+        const messageEl = document.getElementById('auth-message');
+        if (!email) {
+            messageEl.textContent = 'Enter your email first so we can guide you to the right action.';
+            return;
+        }
+        messageEl.textContent = `No worries — create a new account with ${email} if you have not registered yet.`;
+        setAuthMode('register');
+    });
+
+    return modal;
+}
+
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('auth-password');
+    const toggleBtn = document.getElementById('password-toggle-btn');
+    if (!passwordInput || !toggleBtn) return;
+
+    const isHidden = passwordInput.type === 'password';
+    passwordInput.type = isHidden ? 'text' : 'password';
+    toggleBtn.textContent = isHidden ? 'Hide' : 'Show';
+}
+
+function setAuthMode(mode) {
+    const modal = createAuthModal();
+    const nameField = document.getElementById('auth-name');
+    const submitBtn = document.querySelector('.auth-submit-btn');
+    const tabs = document.querySelectorAll('.auth-tab');
+    const form = document.getElementById('auth-form');
+    const message = document.getElementById('auth-message');
+
+    if (message) message.innerHTML = '';
+    tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.mode === mode));
+
+    if (mode === 'register') {
+        nameField.style.display = 'block';
+        nameField.required = true;
+        submitBtn.textContent = 'Create Account';
+        form.dataset.mode = 'register';
+    } else {
+        nameField.style.display = 'none';
+        nameField.required = false;
+        submitBtn.textContent = 'Login';
+        form.dataset.mode = 'login';
+    }
+
+    modal.classList.add('active');
+}
+
+function showAuthModal(mode = 'login') {
+    createAuthModal();
+    setAuthMode(mode);
+}
+
+function hideAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleAuthSubmit(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const mode = form.dataset.mode || 'login';
+    const payload = {
+        email: document.getElementById('auth-email').value.trim(),
+        password: document.getElementById('auth-password').value
+    };
+
+    if (mode === 'register') {
+        payload.name = document.getElementById('auth-name').value.trim();
+    }
+
+    const result = mode === 'register' ? registerUser(payload) : loginUser(payload);
+    const messageEl = document.getElementById('auth-message');
+    messageEl.textContent = result.message;
+
+    if (result.success) {
+        form.reset();
+        renderAuthUI();
+        hideAuthModal();
+        showToast(result.message);
+    } else if (mode === 'login') {
+        const users = getStoredUsers();
+        const hasMatchingEmail = users.some((user) => user.email.toLowerCase() === payload.email.toLowerCase());
+        if (!hasMatchingEmail) {
+            setAuthMode('register');
+            messageEl.textContent = 'That email is not registered yet. Please create an account first.';
+        }
+    }
+}
+
+function handleLogout() {
+    const result = logoutUser();
+    renderAuthUI();
+    showToast(result.message);
+}
+
+function initAuth() {
+    renderAuthUI();
+    createAuthModal();
+}
+
 /**
  * Retrieve cart contents from LocalStorage
  * @returns {Array} List of cart item objects { productId, quantity }
@@ -297,6 +476,7 @@ function initFloatingAIWidget() {
 document.addEventListener('DOMContentLoaded', () => {
     highlightActiveNav();
     updateCartBadge();
+    initAuth();
     initScrollObserver();
     initFloatingAIWidget();
 });
