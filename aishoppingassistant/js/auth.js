@@ -68,13 +68,3 @@ function getCurrentUser() {
     }
 }
 
-if (typeof module !== 'undefined') {
-    module.exports = {
-        registerUser,
-        loginUser,
-        logoutUser,
-        getCurrentUser,
-        AUTH_USERS_KEY,
-        AUTH_CURRENT_USER_KEY
-    };
-}
