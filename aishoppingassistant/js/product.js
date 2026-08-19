@@ -1,6 +1,3 @@
-/**
- * AI Shopping Assistant (ShopAI) - Product Detail Controller with Real Images
- */
 
 document.addEventListener('DOMContentLoaded', () => {
     const detailContainer = document.getElementById('product-detail-container');

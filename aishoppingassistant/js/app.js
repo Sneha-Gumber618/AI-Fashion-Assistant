@@ -1,7 +1,3 @@
-/**
- * AI Shopping Assistant (ShopAI) - Core App Controller, Scroll Observer & Cart Manager
- * Aesthetic Pastel & Interactive Upgrade
- */
 
 const CART_STORAGE_KEY = 'shopai_cart';
 

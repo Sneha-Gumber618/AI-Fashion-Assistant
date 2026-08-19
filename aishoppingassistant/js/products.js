@@ -1,6 +1,3 @@
-/**
- * AI Shopping Assistant (ShopAI) - Products Page Controller with Real Images
- */
 
 document.addEventListener('DOMContentLoaded', () => {
     const productsGrid = document.getElementById('products-grid');

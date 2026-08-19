@@ -1,6 +1,4 @@
-/**
- * AI Shopping Assistant (ShopAI) - Product Dataset with Real Product Images
- */
+
 
 const products = [
     {
