@@ -219,12 +219,28 @@ const products = [
     }
 ];
 
+const ADMIN_PRODUCTS_KEY = 'shopai_admin_products';
+
+function getAdminProducts() {
+    try {
+        const stored = localStorage.getItem(ADMIN_PRODUCTS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        console.error('Error reading admin products from localStorage:', error);
+        return [];
+    }
+}
+
+function saveAdminProducts(adminProducts) {
+    localStorage.setItem(ADMIN_PRODUCTS_KEY, JSON.stringify(adminProducts));
+}
+
 /**
  * Retrieve full product dataset
  * @returns {Array} List of products
  */
 function getProducts() {
-    return products;
+    return products.concat(getAdminProducts());
 }
 
 /**
@@ -233,5 +249,5 @@ function getProducts() {
  * @returns {Object|undefined}
  */
 function getProductById(id) {
-    return products.find(p => p.id === Number(id));
+    return getProducts().find(p => p.id === Number(id));
 }

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Studio - ShopAI</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="seller-studio">
+    <div class="ticker-bar">
+        <div class="ticker-track">
+            <div class="ticker-item"><span>✦ SHOPAI SELLER STUDIO</span><span>✦ MANAGE YOUR CATALOG</span><span>✦ PRODUCTS APPEAR INSTANTLY IN THE SHOP</span></div>
+            <div class="ticker-item"><span>✦ SHOPAI SELLER STUDIO</span><span>✦ MANAGE YOUR CATALOG</span><span>✦ PRODUCTS APPEAR INSTANTLY IN THE SHOP</span></div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="brand-logo"><div class="brand-badge">✨</div>Shop<span class="ai-text">AI</span></a>
+            <ul class="nav-links">
+                <li><a href="products.html" class="nav-link">View Shop</a></li>
+                <li><a href="admin.html" class="nav-link active">Seller Studio</a></li>
+                <li><a href="index.html" class="nav-link">Back to Store</a></li>
+                <li id="admin-nav-logout-item" hidden><button id="admin-logout-btn" class="nav-link admin-nav-logout" type="button"><span>↪</span> Log out</button></li>
+            </ul>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('active')">☰</button>
+        </div>
+    </nav>
+
+    <main class="container admin-shell">
+        <section id="admin-login-panel" class="admin-login-panel">
+            <div class="admin-auth-layout">
+                <aside class="admin-auth-intro">
+                    <div class="admin-brand-mark">✦</div>
+                    <div class="admin-kicker">SHOPAI SELLER STUDIO</div>
+                    <h1>Build your store with confidence.</h1>
+                    <p>One focused workspace for publishing products, checking your catalog, and keeping your shop fresh.</p>
+                    <div class="admin-auth-benefits">
+                        <span>✓ Publish products instantly</span>
+                        <span>✓ Manage your seller catalog</span>
+                        <span>✓ Keep your account private</span>
+                    </div>
+                </aside>
+                <div class="admin-auth-card">
+                    <div id="admin-register-page">
+                        <div class="admin-step-label">STEP 1 OF 2</div>
+                        <h2>Create your admin account</h2>
+                        <p class="admin-card-copy">Register first. You will sign in on the next screen.</p>
+                        <form id="admin-register-form" class="admin-form">
+                            <label>Seller name<input id="admin-name" type="text" placeholder="Your name" required maxlength="60"></label>
+                            <label>Admin ID<input id="register-admin-id" type="text" placeholder="Enter your approved admin ID" required minlength="3" maxlength="30" pattern="[A-Za-z0-9_\-]+"></label>
+                            <label>Password<input id="register-admin-password" type="password" placeholder="At least 6 characters" required minlength="6"></label>
+                            <label>Confirm password<input id="admin-confirm-password" type="password" placeholder="Re-enter your password" required minlength="6"></label>
+                            <button class="btn btn-primary" type="submit">Create Admin Account <span>→</span></button>
+                            <p id="admin-register-message" class="admin-message"></p>
+                        </form>
+                        <button id="show-login-btn" class="admin-text-button" type="button">Already registered? Login here</button>
+                    </div>
+                    <div id="admin-login-page" hidden>
+                        <div class="admin-step-label">STEP 2 OF 2</div>
+                        <h2>Welcome back, seller</h2>
+                        <p class="admin-card-copy">Sign in to continue to your product catalog.</p>
+                        <form id="admin-login-form" class="admin-form">
+                            <label>Admin ID<input id="admin-id" type="text" placeholder="Enter admin ID" required></label>
+                            <label>Password<input id="admin-password" type="password" placeholder="Enter password" required></label>
+                            <button class="btn btn-primary" type="submit">🔐 Login to Seller Studio</button>
+                            <p id="admin-login-message" class="admin-message"></p>
+                        </form>
+                        <button id="show-register-btn" class="admin-text-button" type="button">← Back to registration</button>
+                    </div>
+                    <p class="admin-demo-note">Your admin account is stored only in this browser.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-dashboard" class="admin-dashboard" hidden>
+            <div class="admin-heading-row">
+                <div><div class="admin-kicker">SELLER STUDIO</div><h1 class="section-title">Manage catalog</h1><p class="section-subtitle">Add products and they will be available to every shopper.</p></div>
+            </div>
+            <div class="admin-dashboard-grid">
+                <form id="product-form" class="admin-form admin-product-form">
+                    <h2>Add a product</h2>
+                    <label>Product name<input id="product-name" type="text" required maxlength="80"></label>
+                    <label>Category<select id="product-category" required><option>Skincare</option><option>Electronics</option><option>Fashion</option><option>Home</option><option>Other</option></select></label>
+                    <div class="admin-form-row"><label>Price (₹)<input id="product-price" type="number" min="1" step="1" required></label><label>Badge<input id="product-badge" type="text" value="New Arrival" maxlength="30" required></label></div>
+                    <label>Image URL<input id="product-image" type="url" placeholder="https://..." required></label>
+                    <label>Description<textarea id="product-description" rows="4" maxlength="300" required></textarea></label>
+                    <label>Features <span class="field-hint">one feature per line</span><textarea id="product-features" rows="4" placeholder="Lightweight design&#10;Easy to use" required></textarea></label>
+                    <button class="btn btn-primary" type="submit">＋ Publish Product</button>
+                    <p id="product-form-message" class="admin-message"></p>
+                </form>
+                <div class="admin-products-panel"><div class="admin-panel-heading"><h2>Published products</h2><span id="admin-product-count"></span></div><div id="admin-products-list"></div></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

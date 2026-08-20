@@ -2,6 +2,8 @@
 const CART_STORAGE_KEY = 'shopai_cart';
 
 function renderAuthUI() {
+    if (document.body.dataset.page === 'seller-studio') return;
+
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
 
