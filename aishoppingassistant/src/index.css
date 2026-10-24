@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background-color: #FAF7F2;
+    color: #2F2015;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-editorial {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    background: rgba(250, 247, 242, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .glass-dark {
+    background: rgba(47, 32, 21, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .glass-blush {
+    background: rgba(250, 240, 238, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .text-gradient-editorial {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-mocha-900 via-blush-600 to-mocha-800;
+  }
+
+  .editorial-border {
+    border-color: rgba(222, 199, 177, 0.5);
+  }
+
+  .editorial-shadow {
+    box-shadow: 0 15px 35px -10px rgba(75, 54, 36, 0.08);
+  }
+
+  .editorial-shadow-hover {
+    box-shadow: 0 25px 45px -12px rgba(75, 54, 36, 0.16);
+  }
+}
+
+/* Luxury Editorial Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DEC7B1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C7AA8E;
+}
+
+/* Subtle image transitions */
+img {
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+}

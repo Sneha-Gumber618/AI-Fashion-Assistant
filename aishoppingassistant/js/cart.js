@@ -1,4 +1,6 @@
-
+/**
+ * AI Shopping Assistant (ShopAI) - Cart Page Controller with Real Product Images
+ */
 
 document.addEventListener('DOMContentLoaded', () => {
     const cartContainer = document.getElementById('cart-items-container');

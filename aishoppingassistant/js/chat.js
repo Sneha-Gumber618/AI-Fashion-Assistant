@@ -1,4 +1,6 @@
-
+/**
+ * AI Shopping Assistant (ShopAI) - AI Chat Assistant Controller with Real Product Photos
+ */
 
 function generateAIResponse(userMessage) {
     const text = userMessage.toLowerCase().trim();
