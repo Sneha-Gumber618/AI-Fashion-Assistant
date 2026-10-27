@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNotification } from '../../context/NotificationContext';
-import { Sparkles, Copy, Play } from 'lucide-react';
+import { Sparkles, Copy } from 'lucide-react';
 
-export default function Ticker({ onReplayIntro }) {
+export default function Ticker() {
   const { showToast } = useNotification();
 
   const copyCoupon = (code) => {
@@ -33,16 +33,6 @@ export default function Ticker({ onReplayIntro }) {
 
         <div className="flex items-center gap-4 text-mocha-300 text-[11px] tracking-wider uppercase">
           <span className="hidden md:inline">✦ COMPLIMENTARY SHIPPING OVER ₹999</span>
-          {onReplayIntro && (
-            <button
-              onClick={onReplayIntro}
-              className="hidden lg:flex items-center gap-1.5 text-blush-200 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10"
-              title="Watch brand opening intro again"
-            >
-              <Play className="w-2.5 h-2.5 fill-current" />
-              <span className="text-[10px]">Brand Intro</span>
-            </button>
-          )}
         </div>
       </div>
     </div>

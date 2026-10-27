@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../../context/NotificationContext';
-import { Sparkles, Mail, ShieldCheck, Truck, RefreshCw, Headphones, Heart, Film } from 'lucide-react';
+import { Sparkles, Mail, ShieldCheck, Truck, RefreshCw, Headphones, Heart } from 'lucide-react';
 
-export default function Footer({ onReplayIntro }) {
+export default function Footer() {
   const { showToast } = useNotification();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
@@ -79,19 +79,18 @@ export default function Footer({ onReplayIntro }) {
             </span>
           </Link>
           <p className="text-xs text-mocha-400 leading-relaxed max-w-sm font-sans">
-            ShopAI is an intelligent luxury atelier engineered with React 19, Vite, and Node.js. Discover curated skincare, aesthetic apparel, and tactile electronics with effortless, natural clarity.
+            ShopAI is an intelligent luxury shopping destination and style atelier. Discover curated skincare, aesthetic apparel, and tactile electronics with effortless, natural clarity.
           </p>
           <div className="pt-2">
             <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mocha-500 block mb-2 font-bold">
-              Engineering Architecture
+              Atelier Guarantees
             </span>
             <div className="flex flex-wrap gap-1.5 font-mono">
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-300">React 19</span>
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-mocha-300">Vite SPA</span>
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-200">React Router v7</span>
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-mocha-300">Context API</span>
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-300">Axios</span>
-              <span className="px-2 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-mocha-300">Node.js HTTP</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-300">100% Authentic</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-mocha-300">Express Delivery</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-200">Encrypted Checkout</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-mocha-300">7-Day Returns</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-mocha-900 border border-mocha-800 text-[10px] text-blush-300">Quality Verified</span>
             </div>
           </div>
         </div>
@@ -151,16 +150,6 @@ export default function Footer({ onReplayIntro }) {
               {subscribed ? 'Subscribed' : 'Join Atelier'}
             </button>
           </form>
-
-          {onReplayIntro && (
-            <button
-              onClick={onReplayIntro}
-              className="mt-4 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-blush-300 hover:text-white transition-colors"
-            >
-              <Film className="w-3.5 h-3.5" />
-              Replay Brand Opening Film
-            </button>
-          )}
         </div>
       </div>
 

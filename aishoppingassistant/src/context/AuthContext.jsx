@@ -1,9 +1,11 @@
 /**
- * AuthContext — Updated to use Express API + JWT + Bcrypt
+ * AuthContext — Full Stack Authentication, Authorization, Guest Mode & Admin Control
  *
- * Login and Register now call the real backend API.
- * JWT token is stored in localStorage and auto-attached to all requests.
- * Passwords are NEVER stored client-side — bcrypt handles it on the server.
+ * Capabilities:
+ * 1) Real User Auth: Express API + Bcrypt hashing + JWT token storage
+ * 2) Guest Browsing Mode: Allows catalog browsing; intercepts product details/cart to force user login
+ * 3) Dedicated Admin Authentication & Authorization: Separate admin credentials and session validation
+ * 4) Order Management: Place orders, local sync & shipment status updates
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -15,19 +17,21 @@ const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'shopai_auth_token';
 const USER_KEY = 'shopai_user';
+const ADMIN_TOKEN_KEY = 'shopai_admin_token';
+const ADMIN_USER_KEY = 'shopai_admin_user';
+const GUEST_KEY = 'shopai_is_guest';
 
-// ─── Helper: Check if JWT token is expired ────────────────────────────────────
+// Helper: Check if a JWT token is expired
 function isTokenExpired(token) {
   try {
     const decoded = jwtDecode(token);
-    // decoded.exp is in seconds; Date.now() is in milliseconds
     return decoded.exp * 1000 < Date.now();
   } catch {
-    return true; // If decode fails, treat as expired
+    return true;
   }
 }
 
-// ─── Helper: Get token from localStorage ─────────────────────────────────────
+// Helper: Retrieve valid user token
 function getStoredToken() {
   const token = localStorage.getItem(TOKEN_KEY);
   if (!token || isTokenExpired(token)) {
@@ -38,25 +42,53 @@ function getStoredToken() {
   return token;
 }
 
+// Helper: Retrieve valid admin token
+function getStoredAdminToken() {
+  const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_USER_KEY);
+    return null;
+  }
+  return token;
+}
+
 export function AuthProvider({ children }) {
   const { showToast, triggerMobilePush } = useNotification();
 
-  // View mode: 'customer' | 'admin'
-  const [viewRole, setViewRole] = useState(() => {
-    try { return localStorage.getItem('shopai_view_role') || 'customer'; }
-    catch { return 'customer'; }
-  });
-
-  // Initialize user from stored JWT — only if token is still valid
+  // ─── Current User (Customer / Registered / Guest) ───────────────────────────
   const [currentUser, setCurrentUser] = useState(() => {
     try {
+      const isGuestStored = sessionStorage.getItem(GUEST_KEY);
+      if (isGuestStored === 'true') {
+        return { id: 'guest_user', name: 'Guest Explorer', role: 'guest', isGuest: true };
+      }
       const token = getStoredToken();
       if (!token) return null;
       const saved = localStorage.getItem(USER_KEY);
       return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
 
+  // ─── Dedicated Admin User & Authorization State ─────────────────────────────
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const token = getStoredAdminToken();
+      if (!token) return null;
+      const saved = localStorage.getItem(ADMIN_USER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed?.role === 'admin' ? parsed : null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
+  // ─── Orders State ──────────────────────────────────────────────────────────
   const [orders, setOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('shopai_orders');
@@ -74,37 +106,69 @@ export function AuthProvider({ children }) {
           paymentMethod: 'UPI'
         }
       ];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
-  // Persist viewRole
-  useEffect(() => { localStorage.setItem('shopai_view_role', viewRole); }, [viewRole]);
-
   // Persist orders
-  useEffect(() => { localStorage.setItem('shopai_orders', JSON.stringify(orders)); }, [orders]);
+  useEffect(() => {
+    localStorage.setItem('shopai_orders', JSON.stringify(orders));
+  }, [orders]);
 
-  // ─── Listen for 401 Unauthorized (token expired mid-session) ──────────────
+  // Derived authorization flags
+  const isGuest = Boolean(currentUser?.isGuest || currentUser?.role === 'guest');
+  const isAuthenticated = Boolean(currentUser && !isGuest);
+  const isAdmin = Boolean((adminUser && adminUser.role === 'admin') || (currentUser && currentUser.role === 'admin'));
+
+  // Legacy viewRole compatibility
+  const viewRole = isAdmin ? 'admin' : 'customer';
+
+  // ─── Handle Unauthorized Session Expiration ────────────────────────────────
   useEffect(() => {
     const handleUnauthorized = () => {
-      setCurrentUser(null);
-      showToast('Your session has expired. Please log in again.', 'warning');
+      if (!isGuest) {
+        setCurrentUser(null);
+        showToast('Your session has expired. Please log in again.', 'warning');
+      }
     };
     window.addEventListener('shopai:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('shopai:unauthorized', handleUnauthorized);
+  }, [showToast, isGuest]);
+
+  // Verify saved user session
+  useEffect(() => {
+    if (isGuest || !getStoredToken()) return undefined;
+
+    let active = true;
+    getMeAPI()
+      .then(({ user }) => {
+        if (active && user) {
+          localStorage.setItem(USER_KEY, JSON.stringify(user));
+          setCurrentUser(user);
+        }
+      })
+      .catch((error) => {
+        if (error.response?.status !== 401) {
+          console.error('[Auth] Could not verify the saved session:', error);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isGuest]);
+
+  // ─── GUEST LOGIN: Continue as Guest ────────────────────────────────────────
+  const continueAsGuest = useCallback(() => {
+    sessionStorage.setItem(GUEST_KEY, 'true');
+    const guestObj = { id: 'guest_' + Date.now(), name: 'Guest Explorer', role: 'guest', isGuest: true };
+    setCurrentUser(guestObj);
+    showToast('Browsing catalog as Guest. Sign in when ready to view full details or purchase! ✨', 'info');
+    return guestObj;
   }, [showToast]);
 
-  const toggleViewRole = () => {
-    const nextRole = viewRole === 'customer' ? 'admin' : 'customer';
-    setViewRole(nextRole);
-    showToast(
-      nextRole === 'admin'
-        ? 'Switched to Admin / Seller Portal ⚙️ You can now register and sell products.'
-        : 'Switched to Customer Storefront 🛍️ You can now browse and purchase pieces.',
-      'info'
-    );
-  };
-
-  // ─── LOGIN — calls Express API (bcrypt compare on server, JWT returned) ────
+  // ─── USER LOGIN: Real User with JWT & Bcrypt ──────────────────────────────
   const login = useCallback(async (email, password) => {
     if (!email || !password) {
       showToast('Please enter both email and password.', 'error');
@@ -115,17 +179,23 @@ export function AuthProvider({ children }) {
       const data = await loginUserAPI({ email, password });
 
       if (data.success) {
-        // Store JWT token
+        sessionStorage.removeItem(GUEST_KEY);
         localStorage.setItem(TOKEN_KEY, data.token);
-        // Store user profile (no password — bcrypt handled it on server)
         localStorage.setItem(USER_KEY, JSON.stringify(data.user));
         setCurrentUser(data.user);
+
+        // If the user happens to have admin role, also sync admin state
+        if (data.user.role === 'admin') {
+          localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+          localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(data.user));
+          setAdminUser(data.user);
+        }
+
         showToast(`Welcome back, ${data.user.name}! ✨`, 'success');
         return true;
       }
     } catch (error) {
-      // API returned an error response (401, 400, etc.)
-      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      const message = error.response?.data?.message || 'Login failed. Please verify your credentials.';
       showToast(message, 'error');
       return false;
     }
@@ -133,7 +203,7 @@ export function AuthProvider({ children }) {
     return false;
   }, [showToast]);
 
-  // ─── REGISTER — calls Express API (bcrypt hash on server, JWT returned) ───
+  // ─── USER REGISTER ────────────────────────────────────────────────────────
   const register = useCallback(async (name, email, password) => {
     if (!name || !email || !password) {
       showToast('Please complete all required fields.', 'error');
@@ -144,9 +214,8 @@ export function AuthProvider({ children }) {
       const data = await registerUserAPI({ name, email, password });
 
       if (data.success) {
-        // Store JWT token
+        sessionStorage.removeItem(GUEST_KEY);
         localStorage.setItem(TOKEN_KEY, data.token);
-        // Store user profile
         localStorage.setItem(USER_KEY, JSON.stringify(data.user));
         setCurrentUser(data.user);
         showToast('Account created successfully! Welcome to ShopAI 🚀', 'success');
@@ -161,8 +230,51 @@ export function AuthProvider({ children }) {
     return false;
   }, [showToast]);
 
-  // ─── LOGOUT ───────────────────────────────────────────────────────────────
+  // ─── ADMIN LOGIN: Dedicated Admin Authentication & Authorization ─────────
+  const adminLogin = useCallback(async (email, password) => {
+    if (!email || !password) {
+      showToast('Please provide both administrator email and security password.', 'error');
+      return { success: false, message: 'Please enter both administrator credentials.' };
+    }
+
+    try {
+      const data = await loginUserAPI({ email, password });
+
+      if (data.success) {
+        // Enforce strict Authorization check: MUST have 'admin' role
+        if (data.user.role !== 'admin') {
+          const errMessage = 'Access Forbidden: Customer credentials are not authorized for Administrator Portal.';
+          showToast(errMessage, 'error');
+          return { success: false, message: errMessage };
+        }
+
+        // Store dedicated Admin credentials
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+        localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(data.user));
+        setAdminUser(data.user);
+        showToast(`Welcome to Atelier Merchant Portal, ${data.user.name}! ⚙️`, 'success');
+        return { success: true, user: data.user };
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Administrator authentication failed.';
+      showToast(message, 'error');
+      return { success: false, message };
+    }
+
+    return { success: false, message: 'Invalid credentials.' };
+  }, [showToast]);
+
+  // ─── ADMIN LOGOUT ─────────────────────────────────────────────────────────
+  const adminLogout = useCallback(() => {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_USER_KEY);
+    setAdminUser(null);
+    showToast('Administrator logged out successfully.', 'info');
+  }, [showToast]);
+
+  // ─── USER LOGOUT ──────────────────────────────────────────────────────────
   const logout = useCallback(() => {
+    sessionStorage.removeItem(GUEST_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setCurrentUser(null);
@@ -193,7 +305,7 @@ export function AuthProvider({ children }) {
 
     triggerMobilePush({
       title: `🛵 Order ${newOrder.id} Placed!`,
-      message: `Your payment of ₹${newOrder.totalAmount} was successful. Packing your ${newOrder.items.length} item(s)!`,
+      message: `Your order of ₹${newOrder.totalAmount} was placed successfully. Preparing dispatch!`,
       type: 'order',
       link: '/orders',
       badgeText: 'Order Tracking',
@@ -223,13 +335,17 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         currentUser,
-        isAuthenticated: !!currentUser,
+        adminUser,
+        isAuthenticated,
+        isGuest,
+        isAdmin,
         viewRole,
-        setViewRole,
-        toggleViewRole,
+        continueAsGuest,
         login,
         register,
         logout,
+        adminLogin,
+        adminLogout,
         updateProfile,
         orders,
         placeOrder,

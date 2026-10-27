@@ -7,20 +7,21 @@
 // ─── Regex Patterns ────────────────────────────────────────────────────────────
 
 /** Standard email format: user@domain.tld */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Strong password requirements:
  * - At least 8 characters
+ * - At most 72 characters (bcrypt's maximum input length)
  * - At least 1 uppercase letter [A-Z]
  * - At least 1 lowercase letter [a-z]
  * - At least 1 digit [0-9]
- * - At least 1 special character [@$!%*?&#^()_+]
+ * - At least 1 special character [@$!%*?&#^()_+\-=]
  */
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=])[A-Za-z\d@$!%*?&#^()_+\-=]{8,}$/;
+export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=])[A-Za-z\d@$!%*?&#^()_+\-=]{8,72}$/;
 
 /** Name: 2–50 characters, letters and spaces/hyphens only */
-const NAME_REGEX = /^[a-zA-Z\s\-']{2,50}$/;
+export const NAME_REGEX = /^[a-zA-Z\s\-']{2,50}$/;
 
 
 // ─── Validator Functions ───────────────────────────────────────────────────────
@@ -42,11 +43,14 @@ export function validatePassword(password) {
   if (password.length < 8) {
     return { valid: false, message: 'Password must be at least 8 characters long.' };
   }
+  if (password.length > 72) {
+    return { valid: false, message: 'Password must be no more than 72 characters long.' };
+  }
   if (!PASSWORD_REGEX.test(password)) {
     return {
       valid: false,
       message:
-        'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (@$!%*?&#).',
+        'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (@$!%*?&#^()_+-=).',
     };
   }
   return { valid: true };
@@ -90,26 +94,69 @@ export function validateRegisterInput(req, res, next) {
     return res.status(400).json({ success: false, message: passwordCheck.message, field: 'password' });
   }
 
-  next(); // All validations passed
+  next();
 }
 
 /**
  * validateLoginInput — middleware for POST /api/auth/login
- * Checks that email and password fields exist.
+ * Checks that email and password fields exist and validates email format with regex.
  */
 export function validateLoginInput(req, res, next) {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
     return res.status(400).json({
       success: false,
       message: 'Email and password are required.',
     });
   }
 
+  if (password.length > 72) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be no more than 72 characters long.',
+      field: 'password',
+    });
+  }
+
   const emailCheck = validateEmail(email);
   if (!emailCheck.valid) {
     return res.status(400).json({ success: false, message: emailCheck.message, field: 'email' });
+  }
+
+  next();
+}
+
+/**
+ * validateProductInput — middleware for POST/PUT /api/products
+ * Validates product metadata fields
+ */
+export function validateProductInput(req, res, next) {
+  const { name, price, category } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim().length < 2) {
+    return res.status(400).json({
+      success: false,
+      message: 'Product name is required (minimum 2 characters).',
+      field: 'name',
+    });
+  }
+
+  if (!category || typeof category !== 'string' || category.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Product category is required.',
+      field: 'category',
+    });
+  }
+
+  const numericPrice = Number(price);
+  if (isNaN(numericPrice) || numericPrice < 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Product price must be a valid non-negative number.',
+      field: 'price',
+    });
   }
 
   next();

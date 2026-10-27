@@ -1,15 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, ShieldCheck, Zap, TrendingUp, Clock, Compass, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Sparkles, ArrowRight, ShieldCheck, Zap, TrendingUp, Clock, Compass, Layers, CheckCircle2, Star } from 'lucide-react';
 import { useProducts } from '../context/ProductContext';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { CATEGORIES } from '../data/products';
 import ProductCard from '../components/product/ProductCard';
 import SkeletonCard from '../components/common/SkeletonCard';
+import { formatPrice } from '../utils/formatters';
+
+/**
+ * ScrollRevealFromLeft
+ * Antigravity-style scroll reveal: as the user scrolls down,
+ * content and product intros glide in smoothly from the left.
+ */
+function ScrollRevealFromLeft({ children, className = '', delay = 0, distance = 80 }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef(null);
+
+  useEffect(() => {
+    const element = domRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      {
+        threshold: 0.12,
+        rootMargin: '0px 0px -40px 0px',
+      }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={domRef}
+      style={{
+        transitionDelay: `${delay}ms`,
+        transform: isVisible ? 'translateX(0) scale(1)' : `translateX(-${distance}px) scale(0.97)`,
+        opacity: isVisible ? 1 : 0,
+      }}
+      className={`transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function Home() {
   const { products, loading } = useProducts();
+  const { isGuest, isAuthenticated } = useAuth();
+  const { showToast } = useNotification();
+  const navigate = useNavigate();
 
-  // Flash Sale Countdown Timer using useState and useEffect
+  // Flash Sale Countdown Timer
   const [timeLeft, setTimeLeft] = useState({
     hours: 8,
     minutes: 42,
@@ -33,15 +84,82 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const featuredProducts = products.slice(0, 4);
+  const handleProductIntroClick = (productId) => {
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to view complete piece specifications.', 'info');
+      navigate('/login', { state: { from: `/product/${productId}` } });
+    } else {
+      navigate(`/product/${productId}`);
+    }
+  };
+
   const trendingProducts = products.filter(p => p.badge === 'Trending' || p.badge === 'Bestseller' || p.rating >= 4.7).slice(0, 4);
+  const featuredProducts = products.slice(0, 4);
+
+  // Marquee Showcase Pieces for Antigravity-style intros
+  const showcasePieces = [
+    {
+      id: 1,
+      badge: 'Editorial Marquee',
+      category: 'Fashion & Tailoring',
+      name: 'Silk Linen Relaxed Atelier Blazer',
+      headline: 'Unstructured Sophistication in Earth & Sand Tones',
+      description: 'Crafted from breathable Italian-milled silk linen blend with dropped shoulders and Horn button accents. Tailored specifically for effortless transitions between morning consultations and evening salons.',
+      image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=1000&auto=format&fit=crop&q=80',
+      price: 4999,
+      originalPrice: 6499,
+      rating: 4.9,
+      reviews: 142,
+      specs: ['70% Raw Silk, 30% Belgian Linen', 'Double Welted Pocketing', 'Zero Synthetics']
+    },
+    {
+      id: 4,
+      badge: 'Acoustic Masterwork',
+      category: 'Audio Architecture',
+      name: 'AeroBeat Spatial Wireless Headwear',
+      headline: '40mm Beryllium Drivers with Pure Spatial Clarity',
+      description: 'Engineered for discerning audiophiles and studio producers. Features hybrid dual-mic active noise cancellation, custom anodized mocha aluminum dials, and velvety sheepskin memory foam earcups.',
+      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&auto=format&fit=crop&q=80',
+      price: 2499,
+      originalPrice: 3299,
+      rating: 4.8,
+      reviews: 98,
+      specs: ['42-Hour Playback Endurance', 'Beryllium Transducers', 'Lossless Bluetooth 5.4']
+    },
+    {
+      id: 2,
+      badge: 'Skin Biome Shield',
+      category: 'Atelier Skincare',
+      name: 'SunShield Glow SPF 50 Mineral Fluid',
+      headline: 'Invisible Mineral Defense with Zero White Cast',
+      description: 'Formulated with micronized non-nano zinc oxide and Japanese green tea ferment. Glides on like silk water, absorbing in under 4 seconds while bathing the complexion in a radiant, soft-matte luminosity.',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1000&auto=format&fit=crop&q=80',
+      price: 449,
+      originalPrice: 599,
+      rating: 4.9,
+      reviews: 210,
+      specs: ['SPF 50+ Broad Spectrum PA++++', 'Non-comedogenic', 'Reef-Safe Formula']
+    },
+    {
+      id: 5,
+      badge: 'Tactile Architecture',
+      category: 'Minimalist Workspace',
+      name: 'Lumina Gasket Tactile Mechanical Keyboard',
+      headline: 'Deep Acoustic Thock with CNC Sandblasted Chassis',
+      description: 'A sensory typing experience tuned with 5-layer sound-dampening poron foam, custom pre-lubricated tactile switches, and dye-sublimated PBT keycaps in warm oatmeal and terracotta.',
+      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=1000&auto=format&fit=crop&q=80',
+      price: 3499,
+      originalPrice: 4299,
+      rating: 4.9,
+      reviews: 77,
+      specs: ['Gasket Mount System', 'Hot-Swappable PCB', 'Tri-Mode Wireless Connectivity']
+    }
+  ];
 
   return (
-    <div className="space-y-20 pb-16">
-      {/* Zara & H&M Runway Editorial Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#FAF7F2] via-[#F4ECE1] to-[#FAF0EE] pt-10 pb-20 border-b border-mocha-200/70">
-        
-        {/* Subtle Watermark Branding */}
+    <div className="space-y-24 pb-20 overflow-x-hidden">
+      {/* ─── Hero Section ──────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#FAF7F2] via-[#F4ECE1] to-[#FAF0EE] pt-12 pb-20 border-b border-mocha-200/70">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[15vw] font-serif font-light text-mocha-900/[0.03] select-none pointer-events-none tracking-[0.25em] uppercase">
           ATELIER
         </div>
@@ -49,7 +167,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
-            {/* Left Hero Content: High-Fashion Headline & Editorial Actions */}
+            {/* Left Hero Content */}
             <div className="lg:col-span-5 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 border border-mocha-300 text-mocha-800 text-[11px] font-mono uppercase tracking-[0.2em] shadow-2xs">
                 <span>✦ AUTUMN / WINTER 2026 EDITION</span>
@@ -96,7 +214,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Center Editorial Fashion Model Cutout Frame */}
+            {/* Center Editorial Cutout Frame */}
             <div className="lg:col-span-4 relative flex justify-center">
               <div className="relative w-72 sm:w-84 h-[420px] sm:h-[490px] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/90 bg-[#F4ECE1] group">
                 <img
@@ -108,7 +226,6 @@ export default function Home() {
                   className="w-full h-full object-cover object-top group-hover:scale-106 transition-transform duration-1000 ease-out"
                 />
 
-                {/* Floating Campaign Badge (Zara/H&M editorial ribbon) */}
                 <div className="absolute top-5 right-5 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-xl border border-blush-200/80 flex flex-col items-center animate-float">
                   <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold">
                     Special Atelier Offer
@@ -123,10 +240,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Showcase & Flash Sale Box in Mocha & Blush */}
+            {/* Right Showcase Box */}
             <div className="lg:col-span-3 space-y-4">
-              
-              {/* Mini AI Match Live Box */}
               <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 border border-mocha-200/70 shadow-lg space-y-3">
                 <div className="flex items-center gap-2.5 pb-2 border-b border-mocha-100">
                   <div className="w-8 h-8 rounded-xl bg-mocha-900 text-blush-200 flex items-center justify-center font-bold text-xs shadow-xs">
@@ -165,7 +280,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              {/* Flash Deal Timer Box in Mocha Palette */}
+              {/* Deal Timer */}
               <div className="bg-mocha-900 text-[#FAF7F2] rounded-3xl p-5 shadow-xl border border-mocha-800 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-mono tracking-wider uppercase text-blush-300 text-[11px] flex items-center gap-1.5">
@@ -193,76 +308,185 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* Editorial Category Showcase */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
-          <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block mb-1">
-              Curated Capsules
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-mocha-950 tracking-tight">
-              Explore Atelier Collections
+      {/* ─── ANTIGRAVITY SCROLL ANIMATION SHOWCASE: PRODUCT INTROS FROM LEFT ─── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <ScrollRevealFromLeft distance={100}>
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blush-100 text-blush-800 text-[11px] font-mono uppercase tracking-[0.25em] font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-blush-600" />
+              <span>Scroll-Triggered Atelier Lookbook</span>
+            </div>
+            <h2 className="font-serif text-3xl sm:text-5xl font-light text-mocha-950 tracking-tight">
+              Sculpted Form. Intelligent Essence.
             </h2>
+            <p className="text-xs sm:text-sm text-mocha-600 font-sans leading-relaxed">
+              As you move down the page, experience each signature piece intro sweeping into view from the left — presenting craftsmanship, specifications, and pure aesthetic poise.
+            </p>
           </div>
-          <Link
-            to="/products"
-            className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
-          >
-            All Categories <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        </ScrollRevealFromLeft>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-          {CATEGORIES.filter(c => c.id !== 'all').map((cat) => (
-            <Link
-              key={cat.id}
-              to={`/products?category=${cat.id}`}
-              className="group p-6 bg-white rounded-3xl border border-mocha-200/80 hover:border-blush-300 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-500 flex flex-col items-center text-center"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#FAF0EE] group-hover:bg-blush-100 text-3xl flex items-center justify-center mb-4 transition-colors">
-                {cat.icon}
+        {/* Sequential Product Intro Walkthrough */}
+        <div className="space-y-16 sm:space-y-20">
+          {showcasePieces.map((piece, index) => (
+            <ScrollRevealFromLeft key={piece.id} distance={120} delay={index * 40}>
+              <div className="bg-white rounded-[2.5rem] border border-mocha-200/90 p-6 sm:p-10 shadow-lg hover:shadow-2xl hover:border-blush-300 transition-all duration-700 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center group">
+                
+                {/* Product Image on Left/Right */}
+                <div className="lg:col-span-5 relative">
+                  <div className="aspect-[4/3] sm:aspect-square rounded-3xl overflow-hidden bg-[#F4ECE1] relative shadow-md">
+                    <img
+                      src={piece.image}
+                      alt={piece.name}
+                      className="w-full h-full object-cover object-center group-hover:scale-106 transition-transform duration-1000 ease-out"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <span className="px-3.5 py-1 rounded-full bg-[#1C120B]/90 backdrop-blur-md text-[#FAF7F2] text-[10px] font-mono uppercase tracking-widest font-bold">
+                        {piece.badge}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Intro Narrative on the other side */}
+                <div className="lg:col-span-7 space-y-5">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-blush-700 font-bold">
+                        {piece.category}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs text-amber-500 font-mono">
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <span className="font-bold text-mocha-900">{piece.rating}</span>
+                        <span className="text-mocha-400">({piece.reviews})</span>
+                      </div>
+                    </div>
+                    
+                    <h3 className="font-serif text-2xl sm:text-4xl text-mocha-950 font-normal tracking-tight">
+                      {piece.name}
+                    </h3>
+                    
+                    <p className="font-serif italic text-base sm:text-lg text-blush-800 font-medium">
+                      "{piece.headline}"
+                    </p>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-mocha-600 leading-relaxed font-sans">
+                    {piece.description}
+                  </p>
+
+                  {/* Highlights / Specs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                    {piece.specs.map((spec, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-[#FAF7F2] border border-mocha-200/70 text-[11px] text-mocha-800 font-mono">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blush-600 shrink-0" />
+                        <span className="truncate">{spec}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Price & Action */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-mocha-100">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl sm:text-3xl font-mono font-bold text-mocha-950">
+                        {formatPrice(piece.price)}
+                      </span>
+                      {piece.originalPrice && (
+                        <span className="text-sm font-mono text-mocha-400 line-through">
+                          {formatPrice(piece.originalPrice)}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleProductIntroClick(piece.id)}
+                      className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] font-semibold text-xs uppercase tracking-wider shadow-md hover:scale-[1.02] transition-all cursor-pointer font-mono"
+                    >
+                      <span>Inspect Piece Details</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
               </div>
-              <h3 className="font-serif text-lg font-normal text-mocha-950 group-hover:text-blush-700 transition-colors">
-                {cat.name}
-              </h3>
-              <span className="text-[11px] font-mono uppercase tracking-wider text-mocha-400 mt-1">
-                View Pieces →
-              </span>
-            </Link>
+            </ScrollRevealFromLeft>
           ))}
         </div>
       </section>
 
-      {/* Trending Runway Picks Grid */}
+      {/* ─── Category Showcase (Slide in on scroll) ───────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-blush-100 text-blush-700 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5" />
-            </div>
+        <ScrollRevealFromLeft distance={80}>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block">
-                Trending This Season
+              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block mb-1">
+                Curated Capsules
               </span>
               <h2 className="font-serif text-3xl sm:text-4xl font-normal text-mocha-950 tracking-tight">
-                Most Desired Pieces
+                Explore Atelier Collections
               </h2>
             </div>
+            <Link
+              to="/products"
+              className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
+            >
+              All Categories <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            to="/products"
-            className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
-          >
-            View Complete Lookbook <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+        </ScrollRevealFromLeft>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+          {CATEGORIES.filter(c => c.id !== 'all').map((cat, idx) => (
+            <ScrollRevealFromLeft key={cat.id} distance={80} delay={idx * 70}>
+              <Link
+                to={`/products?category=${cat.id}`}
+                className="group p-6 bg-white rounded-3xl border border-mocha-200/80 hover:border-blush-300 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-500 flex flex-col items-center text-center h-full"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-[#FAF0EE] group-hover:bg-blush-100 text-3xl flex items-center justify-center mb-4 transition-colors">
+                  {cat.icon}
+                </div>
+                <h3 className="font-serif text-lg font-normal text-mocha-950 group-hover:text-blush-700 transition-colors">
+                  {cat.name}
+                </h3>
+                <span className="text-[11px] font-mono uppercase tracking-wider text-mocha-400 mt-1">
+                  View Pieces →
+                </span>
+              </Link>
+            </ScrollRevealFromLeft>
+          ))}
         </div>
+      </section>
+
+      {/* ─── Trending Runway Picks Grid (Slide in on scroll) ─────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollRevealFromLeft distance={80}>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-blush-100 text-blush-700 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block">
+                  Trending This Season
+                </span>
+                <h2 className="font-serif text-3xl sm:text-4xl font-normal text-mocha-950 tracking-tight">
+                  Most Desired Pieces
+                </h2>
+              </div>
+            </div>
+            <Link
+              to="/products"
+              className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
+            >
+              View Complete Lookbook <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </ScrollRevealFromLeft>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -270,61 +494,66 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {trendingProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {trendingProducts.map((product, idx) => (
+              <ScrollRevealFromLeft key={product.id} distance={70} delay={idx * 60}>
+                <ProductCard product={product} />
+              </ScrollRevealFromLeft>
             ))}
           </div>
         )}
       </section>
 
-      {/* Zara/H&M Style Minimalist Campaign Banner */}
+      {/* ─── Editorial Campaign Banner ───────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#2C1E14] text-[#FAF7F2] rounded-[2.5rem] p-8 sm:p-14 relative overflow-hidden shadow-2xl border border-mocha-800">
-          {/* Subtle Pink/Brown light halo */}
-          <div className="absolute top-0 right-0 -mt-16 -mr-16 w-96 h-96 rounded-full bg-blush-500/10 blur-3xl pointer-events-none"></div>
+        <ScrollRevealFromLeft distance={100}>
+          <div className="bg-[#2C1E14] text-[#FAF7F2] rounded-[2.5rem] p-8 sm:p-14 relative overflow-hidden shadow-2xl border border-mocha-800">
+            <div className="absolute top-0 right-0 -mt-16 -mr-16 w-96 h-96 rounded-full bg-blush-500/10 blur-3xl pointer-events-none"></div>
 
-          <div className="relative max-w-2xl space-y-5">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-blush-200 text-[10px] font-mono uppercase tracking-[0.25em] backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-blush-300" />
-              INTELLIGENT FASHION ATELIER
-            </span>
-            <h2 className="font-serif text-3xl sm:text-5xl font-light tracking-tight leading-tight">
-              Tired of Endless Scrolling? Let AI Style Your Palette.
-            </h2>
-            <p className="text-mocha-200 text-sm sm:text-base leading-relaxed font-sans">
-              From zero-white-cast skincare to tactile mechanical desks and minimalist streetwear, our algorithmic stylist curates only what harmonizes with your lifestyle.
-            </p>
-            <div className="pt-2">
-              <Link
-                to="/assistant"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#FAF7F2] text-mocha-950 hover:bg-blush-100 font-semibold text-xs tracking-wider uppercase shadow-xl hover:scale-105 transition-all"
-              >
-                Launch AI Shopping Stylist
-                <ArrowRight className="w-3.5 h-3.5 text-mocha-900" />
-              </Link>
+            <div className="relative max-w-2xl space-y-5">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-blush-200 text-[10px] font-mono uppercase tracking-[0.25em] backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-blush-300" />
+                INTELLIGENT FASHION ATELIER
+              </span>
+              <h2 className="font-serif text-3xl sm:text-5xl font-light tracking-tight leading-tight">
+                Tired of Endless Scrolling? Let AI Style Your Palette.
+              </h2>
+              <p className="text-mocha-200 text-sm sm:text-base leading-relaxed font-sans">
+                From zero-white-cast skincare to tactile mechanical desks and minimalist streetwear, our algorithmic stylist curates only what harmonizes with your lifestyle.
+              </p>
+              <div className="pt-2">
+                <Link
+                  to="/assistant"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#FAF7F2] text-mocha-950 hover:bg-blush-100 font-semibold text-xs tracking-wider uppercase shadow-xl hover:scale-105 transition-all"
+                >
+                  Launch AI Shopping Stylist
+                  <ArrowRight className="w-3.5 h-3.5 text-mocha-900" />
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        </ScrollRevealFromLeft>
       </section>
 
-      {/* Featured Pieces Catalog Preview */}
+      {/* ─── Featured Selections ─────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
-          <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block mb-1">
-              Curator's Edit
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-mocha-950 tracking-tight">
-              Featured Selections
-            </h2>
+        <ScrollRevealFromLeft distance={80}>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-mocha-200">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-blush-700 font-bold block mb-1">
+                Curator's Edit
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl font-normal text-mocha-950 tracking-tight">
+                Featured Selections
+              </h2>
+            </div>
+            <Link
+              to="/products"
+              className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
+            >
+              All Products <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            to="/products"
-            className="text-xs font-bold uppercase tracking-wider text-mocha-700 hover:text-blush-600 flex items-center gap-1.5 transition-colors"
-          >
-            All Products <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        </ScrollRevealFromLeft>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -332,8 +561,10 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {featuredProducts.map((product, idx) => (
+              <ScrollRevealFromLeft key={product.id} distance={70} delay={idx * 60}>
+                <ProductCard product={product} />
+              </ScrollRevealFromLeft>
             ))}
           </div>
         )}

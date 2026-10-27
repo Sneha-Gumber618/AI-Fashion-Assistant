@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { formatPrice } from '../utils/formatters';
 import {
   Trash2,
@@ -36,6 +38,17 @@ export default function Cart() {
 
   const [couponInput, setCouponInput] = useState('');
   const navigate = useNavigate();
+  const { isGuest, isAuthenticated } = useAuth();
+  const { showToast } = useNotification();
+
+  const handleProceedCheckout = () => {
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to proceed to checkout.', 'info');
+      navigate('/login', { state: { from: '/checkout' } });
+      return;
+    }
+    navigate('/checkout');
+  };
 
   const handleApplyCoupon = (e) => {
     e.preventDefault();
@@ -302,7 +315,7 @@ export default function Cart() {
 
             {/* Proceed to Checkout Button */}
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={handleProceedCheckout}
               className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] font-semibold text-xs tracking-wider uppercase shadow-lg shadow-mocha-900/15 transition-all hover:scale-[1.01]"
             >
               Proceed to Checkout

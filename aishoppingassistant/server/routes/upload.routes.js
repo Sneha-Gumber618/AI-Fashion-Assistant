@@ -1,7 +1,8 @@
 /**
  * Upload Routes — Express Router (Multer)
- * POST /api/upload/product-image — Upload a product image (JWT protected)
- * GET  /api/upload/files          — List all uploaded files
+ * POST   /api/upload/product-image  — Upload a product image (JWT protected)
+ * GET    /api/upload/files          — List all uploaded files (JWT protected)
+ * DELETE /api/upload/files/:filename — Delete an uploaded file (Admin only)
  *
  * Syllabus: Multer file uploads, JWT protection on routes, static file serving
  */
@@ -12,7 +13,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import upload from '../config/multer.config.js';
-import { verifyToken } from '../middleware/auth.middleware.js';
+import { verifyToken, requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -28,28 +29,21 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 // ─── POST /api/upload/product-image ───────────────────────────────────────────
 /**
  * Upload a product image file.
- * Protected: Only authenticated admins can upload product images.
- *
- * Multer processes the multipart/form-data request,
- * validates file type via regex (in multer.config.js),
- * and saves the file to public/uploads/.
- *
- * Field name: "productImage"
+ * Protected: JWT authentication required.
+ * Multer processes multipart/form-data, validates file type with RegEx, and saves to public/uploads.
  */
 router.post(
   '/product-image',
-  verifyToken,                          // 1. Verify JWT first
-  upload.single('productImage'),        // 2. Multer processes the file
+  verifyToken,
+  upload.single('productImage'),
   (req, res) => {
-    // If no file was included in the request
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No image file provided. Please attach a product image.',
+        message: 'No image file provided. Please attach a product image with field name "productImage".',
       });
     }
 
-    // Build the public URL for the uploaded file
     const fileUrl = `/uploads/${req.file.filename}`;
 
     return res.status(201).json({
@@ -60,8 +54,8 @@ router.post(
         originalName: req.file.originalname,
         size: req.file.size,
         mimeType: req.file.mimetype,
-        url: fileUrl,                   // Public URL to use in product listings
-        uploadedBy: req.user.email,     // From decoded JWT
+        url: fileUrl,
+        uploadedBy: req.user.email,
         uploadedAt: new Date().toISOString(),
       },
     });
@@ -97,8 +91,33 @@ router.get('/files', verifyToken, (req, res) => {
   }
 });
 
+// ─── DELETE /api/upload/files/:filename ───────────────────────────────────────
+/**
+ * Delete an uploaded image.
+ * Protected: Admin only.
+ */
+router.delete('/files/:filename', verifyToken, requireAdmin, (req, res) => {
+  try {
+    const { filename } = req.params;
+    const sanitized = path.basename(filename);
+    const filePath = path.join(UPLOADS_DIR, sanitized);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'File not found.' });
+    }
+
+    fs.unlinkSync(filePath);
+    return res.status(200).json({
+      success: true,
+      message: `File ${sanitized} deleted successfully.`,
+    });
+  } catch (error) {
+    console.error('[Upload] Delete file error:', error);
+    return res.status(500).json({ success: false, message: 'Could not delete file.' });
+  }
+});
+
 // ─── Multer Error Handler ─────────────────────────────────────────────────────
-// Catches errors specifically from Multer (file size, file type rejections)
 router.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({

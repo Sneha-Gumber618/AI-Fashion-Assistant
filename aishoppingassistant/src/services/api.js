@@ -29,7 +29,9 @@ export const authApi = axios.create({
 
 // ─── Request Interceptor: Attach JWT Bearer Token ──────────────────────────────
 const attachToken = (config) => {
-  const token = localStorage.getItem('shopai_auth_token');
+  const adminToken = localStorage.getItem('shopai_admin_token');
+  const userToken = localStorage.getItem('shopai_auth_token');
+  const token = adminToken || userToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -12,6 +12,7 @@ const REGEX = {
   hasDigit: /\d/,
   hasSpecial: /[@$!%*?&#^()_+\-=]/,
   minLength: /.{8,}/,
+  maxLength: /^.{0,72}$/,
   name: /^[a-zA-Z\s\-']{2,50}$/,
 };
 
@@ -19,6 +20,7 @@ const REGEX = {
 function getPasswordRules(password) {
   return [
     { label: 'At least 8 characters', met: REGEX.minLength.test(password) },
+    { label: 'No more than 72 characters', met: REGEX.maxLength.test(password) },
     { label: 'One uppercase letter (A–Z)', met: REGEX.hasUppercase.test(password) },
     { label: 'One lowercase letter (a–z)', met: REGEX.hasLowercase.test(password) },
     { label: 'One number (0–9)', met: REGEX.hasDigit.test(password) },
@@ -199,6 +201,7 @@ export default function Register() {
               <input
                 id="register-password"
                 type={showPassword ? 'text' : 'password'}
+                maxLength={72}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

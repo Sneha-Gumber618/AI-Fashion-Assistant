@@ -1,68 +1,94 @@
-# ShopAI — Luxury Aesthetic Atelier, AI Stylist & Merchant Portal
+# ShopAI — AI-Powered Luxury Atelier & E-Commerce Platform
 
-ShopAI is an intelligent luxury e-commerce platform and merchant marketplace built with **React 19, Vite, React Router v7, Context API, Axios, Tailwind CSS**, and a **Node.js and Express**, adhering strictly to the **Front-End & Back-End Engineering Syllabus (Course & Lab Plan 24CAI0303)**.
-
----
-
-## 🌟 Key Features
-
-### 1. 📱 Zomato & Swiggy Style Smartphone Push Notifications
-* **Mobile Push Banner ([`PushBanner.jsx`](file:///c:/Users/AMAN/OneDrive/Desktop/aishoppingassistant/src/components/common/PushBanner.jsx))**:
-  * Slides down from the top of the screen with iOS / Android mobile notification styling.
-  * Shows app brand icon (`SHOPAI ATELIER • now`), punchy headline with emoji, body preview, and tap to view.
-  * Plays a pleasant dual-tone smartphone notification chime synthesized via the Web Audio API ([`src/utils/sound.js`](file:///c:/Users/AMAN/OneDrive/Desktop/aishoppingassistant/src/utils/sound.js)).
-  * Triggers automatically when:
-    * An order is placed (e.g. *"🛵 Order #ORD-123456 Placed!"*).
-    * A seller/admin registers a new product into the store.
-    * An order shipment status changes (*"🛵 Out for Delivery: Delivery partner assigned"*).
-    * Smart engagement nudges (e.g. *"☕ Style Break: BrewMate Coffee Maker is trending in your area!"*).
-
-### 2. 🔔 Amazon / Swiggy Notification Center Bell ([`NotificationBell.jsx`](file:///c:/Users/AMAN/OneDrive/Desktop/aishoppingassistant/src/components/common/NotificationBell.jsx))
-* Situated in the header with an unread badge indicator counter.
-* Opens a categorized notification panel with filter tabs:
-  * **All**: Complete stream of atelier updates.
-  * **📦 Orders**: Live order milestones and receipt notices.
-  * **🔥 Offers**: Promotional privilege codes (e.g., `STYLE20` for 20% off).
-  * **✨ Pieces**: New catalog drops and restock alerts.
-* Features *"Mark all as read"*, individual delete, and click-to-navigate.
-
-### 3. ⚙️ Admin / Seller Portal & Role Switcher ([`Admin.jsx`](file:///c:/Users/AMAN/OneDrive/Desktop/aishoppingassistant/src/pages/Admin.jsx))
-* **Role Switcher in Header**: Toggle seamlessly between `[👤 Customer Mode]` and `[⚡ Admin Mode]`.
-* **Register New Products (Sell Products)**:
-  * Form inputs for title, category, selling price, original price, stock count, highlight badge, image URL (with one-click sample photo presets), description, and bulleted features.
-  * Instant publishing: freshly registered products immediately enter the master store catalog and are persisted in `localStorage`.
-  * Customers can immediately find them in `/products`, open their detail pages (`/product/:id`), add them to cart, and purchase them!
-* **Store Inventory Manager**:
-  * Real-time stock adjuster (`+` / `-` stock counter).
-  * Direct storefront preview link & product removal.
-* **Order Fulfillment Manager**:
-  * Real-time customer orders table.
-  * Change milestone status: `Confirmed` → `Packed` → `In Transit` → `Out for Delivery` → `Delivered`.
-  * Changing order status immediately triggers a Zomato/Swiggy-style push notification to the customer!
-
-### 4. 🎬 Zara & H&M Runway Editorial Opening Splash ([`EditorialSplash.jsx`](file:///c:/Users/AMAN/OneDrive/Desktop/aishoppingassistant/src/components/common/EditorialSplash.jsx))
-* Cinematic opening brand reveal with tracked letter expansion for **"SHOPAI"**.
-* Seasonal atelier credits (`AUTUMN / WINTER 2026`).
-* Smooth dissolve into the storefront, with instant skip and replay capability.
-
-### 5. 🎨 Pink & Brown Pastel Aesthetic Palette
-* High-fashion runway styling with **Cormorant Garamond** & **Italiana** serif fonts.
-* Soft dusty rose & blush pastels paired with warm mocha, latte sand, and deep espresso tones.
+ShopAI is a full-stack e-commerce platform and merchant marketplace built according to the course technical specifications.
 
 ---
 
-## 🚀 How to Run the Application
+## 🛠️ Tech Stack Overview
 
-### Start Frontend (Vite + React)
-```powershell
-npm run dev
+| # | Technology | Implementation Details |
+|---|---|---|
+| **1** | **MongoDB + Mongoose** | Data persistence using Mongoose Schemas & Models: `User` (with unique email, subdocument address), `Product` (pricing, stock, reviews subdocument), and `Order` (items, total, shippingAddress, status). Resilient connection lifecycle with automatic database seeding (`seed.js`). |
+| **2** | **NodeJS + ExpressJS** | High-performance Express server (`server.js`), modular routes (`auth.routes.js`, `product.routes.js`, `order.routes.js`, `upload.routes.js`), EventEmitters, centralized middleware chain, and global error handling. |
+| **3** | **Authentication (Bcrypt + RegEx)** | Secure registration & login flow: 12-round salt password hashing via `bcryptjs`, and strict regular expression validation on email (`EMAIL_REGEX`), password complexity (`PASSWORD_REGEX`), and user names (`NAME_REGEX`). |
+| **4** | **JWT (JSON Web Tokens)** | Stateless token-based session management (`jsonwebtoken`). `verifyToken` middleware extracts Bearer tokens, protects private endpoints (`/api/auth/me`), and enforces Role-Based Access Control (`requireAdmin`, `requireRole`). |
+| **5** | **Multer** | Multipart form-data image upload engine (`multer.config.js`). Enforces regex-based image MIME type validation (`/^image\/(jpeg\|jpg\|png\|webp\|gif)$/`), 5MB file size limits, UUID filename generation, and static hosting under `/uploads`. |
+| **6** | **React JS** | React 19 + Vite + Tailwind CSS frontend featuring custom luxury atelier aesthetic, AI shopping assistant modal, Cart & Wishlist, interactive Admin panel with Multer image upload UI, and push notification center. |
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Environment Configuration
+Ensure `aishoppingassistant/.env` is configured (pre-configured with secure defaults):
+```env
+PORT=5000
+NODE_ENV=development
+MONGODB_URI=mongodb://127.0.0.1:27017/shopai
+JWT_SECRET=62669b376dee1eb9c7e1548df24571ab07f5cedd53c93b7722bc4fa6459ffce5489169ccd05a894d8ce06556148c57e000d0efd3faa888cfb5f89f682e9c14b8
+JWT_EXPIRES_IN=7d
 ```
-Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
-### Start Backend (Express)
-Copy `.env.example` to `.env` and set a unique `JWT_SECRET` before starting the backend.
+> **Note on MongoDB**: If MongoDB is installed locally or a MongoDB Atlas URI is provided in `MONGODB_URI`, the server connects automatically and seeds the database. If MongoDB is not yet running, the server gracefully activates its resilient fallback mode so you can continue testing without interruption.
 
+### 2. Run Backend Server (Node.js + Express)
 ```powershell
+cd aishoppingassistant
 npm run server
 ```
-Runs the Node.js server on **[http://localhost:5000](http://localhost:5000)**.
+* Server URL: **http://localhost:5000**
+* Health Status: **http://localhost:5000/api/health**
+
+### 3. Run Frontend (React + Vite)
+In a second terminal window:
+```powershell
+cd aishoppingassistant
+npm run dev
+```
+* Storefront UI: **http://localhost:5173**
+
+### 4. Run Automated Tech Stack Verification Test
+```powershell
+cd aishoppingassistant
+npm test
+```
+Verifies all 6 requirements (MongoDB schemas, Express routes, Bcrypt hashing, RegEx checks, JWT tokens, Multer config, and React build) with 68 passing assertions.
+
+---
+
+## 👥 Pre-Seeded Demo Credentials
+
+| Role | Email | Password | Permissions |
+|---|---|---|---|
+| **Customer** | `demo@shopai.com` | `Demo@1234` | Browse atelier, AI chat, cart, checkout, profile |
+| **Admin** | `admin@shopai.com` | `Admin@1234` | Manage inventory, fulfill orders, upload product images via Multer |
+
+*(Use the "Quick Auto-Fill Demo Credentials" button on the Login page for one-click access)*
+
+---
+
+## 📡 API Endpoint Reference
+
+### Authentication (`/api/auth`)
+* `POST /api/auth/register` — Register account (validates with RegEx, hashes password with Bcrypt, signs JWT).
+* `POST /api/auth/login` — Sign in (verifies password with Bcrypt compare, returns JWT).
+* `GET  /api/auth/me` — Get profile for authenticated user (`Authorization: Bearer <token>`).
+* `PUT  /api/auth/profile` — Update address or name for current user.
+* `GET  /api/auth/users` — Admin only: list all registered users.
+
+### Products (`/api/products`)
+* `GET    /api/products` — List catalog products with search, category filter, price filter, and sorting.
+* `GET    /api/products/:id` — Retrieve product details by ID.
+* `POST   /api/products` — Admin only: create a new product.
+* `PUT    /api/products/:id` — Admin only: update product inventory/details.
+* `DELETE /api/products/:id` — Admin only: remove product from catalog.
+
+### Orders (`/api/orders`)
+* `POST /api/orders` — Place order (supports authenticated or guest users).
+* `GET  /api/orders` — Retrieve user orders (or all orders if admin).
+* `PUT  /api/orders/:id/status` — Admin only: update order fulfillment status.
+
+### Image Upload (`/api/upload`)
+* `POST   /api/upload/product-image` — Multer file upload (field name: `productImage`, JWT protected).
+* `GET    /api/upload/files` — List uploaded image files.
+* `DELETE /api/upload/files/:filename` — Admin only: remove uploaded file.

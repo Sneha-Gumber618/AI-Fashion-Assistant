@@ -10,32 +10,36 @@ import PushBanner from '../common/PushBanner';
 
 export default function Layout() {
   const [showSplash, setShowSplash] = useState(() => {
-    // Show splash on new session
-    return !sessionStorage.getItem('shopai_splash_seen');
+    // Brand intro is displayed ONLY once when opening the website for the first time
+    try {
+      return !localStorage.getItem('shopai_brand_intro_seen');
+    } catch {
+      return false;
+    }
   });
 
   const handleSplashComplete = () => {
     setShowSplash(false);
-    sessionStorage.setItem('shopai_splash_seen', 'true');
-  };
-
-  const handleReplayIntro = () => {
-    setShowSplash(true);
+    try {
+      localStorage.setItem('shopai_brand_intro_seen', 'true');
+    } catch {
+      // ignore
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-mocha-950 antialiased font-sans selection:bg-blush-300 selection:text-mocha-950">
-      {/* Zara / H&M Style Editorial Opening Splash */}
+      {/* Brand Opening Splash (Rendered only on the very first visit) */}
       {showSplash && <EditorialSplash onComplete={handleSplashComplete} />}
 
-      {/* Zomato / Swiggy / iOS Smartphone Push Notification Banner */}
+      {/* Smartphone Push Notification Banner */}
       <PushBanner />
 
       {/* Top Banner Ticker with pink & brown pastel palette */}
-      <Ticker onReplayIntro={handleReplayIntro} />
+      <Ticker />
 
       {/* Sticky Main Navigation */}
-      <Navbar onReplayIntro={handleReplayIntro} />
+      <Navbar />
 
       {/* Main Content Area via React Router Outlet */}
       <main className="flex-1 animate-fade-in">
@@ -47,7 +51,7 @@ export default function Layout() {
       <FloatingAiWidget />
 
       {/* Site Footer */}
-      <Footer onReplayIntro={handleReplayIntro} />
+      <Footer />
     </div>
   );
 }

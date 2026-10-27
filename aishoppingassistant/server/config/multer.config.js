@@ -6,6 +6,7 @@
 
 import multer from 'multer';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,11 +21,8 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    // Generate unique filename: timestamp + sanitized original name
-    // e.g., "1698321456789-product-image.jpg"
-    const sanitizedName = file.originalname.replace(/\s+/g, '-').toLowerCase();
-    const uniqueFilename = `${Date.now()}-${sanitizedName}`;
-    cb(null, uniqueFilename);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, `${randomUUID()}${extension}`);
   },
 });
 
@@ -33,7 +31,10 @@ const storage = multer.diskStorage({
 const imageFileFilter = (req, file, cb) => {
   // Regex: match allowed image MIME types
   const allowedMimeTypes = /^image\/(jpeg|jpg|png|webp|gif)$/;
-  const isAllowed = allowedMimeTypes.test(file.mimetype);
+  const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+  const isAllowed =
+    allowedMimeTypes.test(file.mimetype) &&
+    allowedExtensions.has(path.extname(file.originalname).toLowerCase());
 
   if (isAllowed) {
     cb(null, true); // Accept the file

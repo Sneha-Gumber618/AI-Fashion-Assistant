@@ -8,14 +8,22 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed": "node server/config/seed.js",
+    "test": "node server/test-inprocess.js"
   },
   "keywords": [
     "react",
     "vite",
     "ecommerce",
     "ai-shopping",
-    "tailwindcss"
+    "tailwindcss",
+    "mongodb",
+    "mongoose",
+    "express",
+    "jwt",
+    "bcrypt",
+    "multer"
   ],
   "author": "ShopAI Team",
   "license": "ISC",
@@ -28,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.16.0",
+    "mongoose": "^9.11.4",
     "multer": "^2.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

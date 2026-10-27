@@ -1,0 +1,14 @@
+{
+  "name": "aishoppingassistant-workspace",
+  "version": "2.0.0",
+  "description": "ShopAI AI-Powered Shopping Platform Workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix aishoppingassistant run dev",
+    "build": "npm --prefix aishoppingassistant run build",
+    "server": "npm --prefix aishoppingassistant run server",
+    "start": "npm --prefix aishoppingassistant run start",
+    "test": "npm --prefix aishoppingassistant run test",
+    "seed": "npm --prefix aishoppingassistant run seed"
+  }
+}

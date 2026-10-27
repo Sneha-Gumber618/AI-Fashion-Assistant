@@ -3,7 +3,7 @@ import { useProducts } from '../context/ProductContext';
 import ProductCard from '../components/product/ProductCard';
 import ProductFilter from '../components/product/ProductFilter';
 import SkeletonCard from '../components/common/SkeletonCard';
-import { LayoutGrid, List, SlidersHorizontal, Search, X } from 'lucide-react';
+import { LayoutGrid, List, SlidersHorizontal, Search, X, Sparkles } from 'lucide-react';
 
 export default function Products() {
   const {
@@ -91,6 +91,61 @@ export default function Products() {
         </div>
       </div>
 
+      {/* DEDICATED BIG LIVE SEARCH BAR — ONLY ON PRODUCTS PAGE */}
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-mocha-200 shadow-sm hover:shadow-md transition-shadow space-y-3.5">
+        <div className="relative flex items-center">
+          <Search className="w-6 h-6 text-mocha-400 absolute left-4.5 pointer-events-none" />
+          <input
+            id="catalog-live-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type words here to live search catalog (e.g., linen blazer, headphones, sunscreen, sneakers)..."
+            className="w-full bg-[#FAF7F2] hover:bg-[#F4ECE1]/60 focus:bg-white text-sm sm:text-base text-mocha-950 placeholder-mocha-400 pl-14 pr-12 py-4 rounded-2xl border-2 border-mocha-200/90 focus:border-blush-400 focus:outline-none focus:ring-4 focus:ring-blush-200/40 transition-all font-sans shadow-inner"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 p-2 rounded-full hover:bg-mocha-200 text-mocha-500 hover:text-mocha-900 transition-colors"
+              title="Clear search query"
+              aria-label="Clear search"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Live Reflection & Quick Trending Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-mocha-600 font-bold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-blush-500" />
+              {searchQuery ? (
+                <>Live Search: <span className="text-mocha-950 font-sans italic">"{searchQuery}"</span></>
+              ) : (
+                'Live Search Active'
+              )}
+            </span>
+            <span className="text-blush-800 font-mono font-bold text-xs bg-blush-100 border border-blush-200/60 px-2.5 py-0.5 rounded-full">
+              {products.length} {products.length === 1 ? 'piece matching' : 'pieces matching'}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+            <span className="text-mocha-400 uppercase tracking-wider mr-1">Trending Tags:</span>
+            {['Blazer', 'Headphones', 'SunShield', 'Keyboard', 'Sneakers', 'Serum'].map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSearchQuery(tag)}
+                className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2] hover:bg-blush-100 hover:text-blush-800 text-mocha-700 border border-mocha-200 transition-colors cursor-pointer"
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Active Filter Pills Bar */}
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
@@ -173,7 +228,7 @@ export default function Products() {
                 No matching pieces found
               </h3>
               <p className="text-xs text-mocha-500 font-sans leading-relaxed">
-                We couldn't locate any items matching your selected criteria. Try adjusting your price range or exploring other categories.
+                We couldn't locate any items matching your search query "{searchQuery}". Try typing another word or resetting filters.
               </p>
               <button
                 onClick={resetFilters}

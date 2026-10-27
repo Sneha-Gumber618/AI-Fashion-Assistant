@@ -4,6 +4,7 @@ import { fetchProductByIdFromAPI, fetchProductsFromAPI } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { formatPrice, calculateDiscount } from '../utils/formatters';
 import StarRating from '../components/common/StarRating';
 import Badge from '../components/common/Badge';
@@ -29,6 +30,14 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { showToast } = useNotification();
+  const { isGuest, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to view complete piece specifications.', 'info');
+      navigate('/login', { state: { from: `/product/${id}` } });
+    }
+  }, [isGuest, isAuthenticated, navigate, id, showToast]);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);

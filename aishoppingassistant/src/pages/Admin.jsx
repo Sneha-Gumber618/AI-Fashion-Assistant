@@ -30,9 +30,21 @@ import {
 
 export default function Admin() {
   const { products, masterProducts, registerProduct, updateProduct, deleteProduct } = useProducts();
-  const { orders, updateOrderStatus, viewRole, toggleViewRole } = useAuth();
+  const { orders, updateOrderStatus, isAdmin, adminUser, adminLogout } = useAuth();
   const { showToast } = useNotification();
   const navigate = useNavigate();
+
+  // Enforce Authorization: Admin clearance required
+  React.useEffect(() => {
+    if (!isAdmin) {
+      showToast('Restricted Area: Administrator credentials required.', 'warning');
+      navigate('/admin/login');
+    }
+  }, [isAdmin, navigate, showToast]);
+
+  if (!isAdmin) {
+    return null;
+  }
 
   // Controlled New Product Form State
   const [formData, setFormData] = useState({
@@ -203,13 +215,24 @@ export default function Admin() {
           </p>
         </div>
 
-        {/* View Mode Toggle Button */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        {/* Navigation & Admin Session Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-[#FAF7F2] font-semibold text-xs uppercase tracking-wider transition-all border border-white/20 font-mono"
+            title="Return to public customer store"
+          >
+            <span>Storefront</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
           <button
-            onClick={toggleViewRole}
+            onClick={() => {
+              adminLogout();
+              navigate('/admin/login');
+            }}
             className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#FAF7F2] text-mocha-950 hover:bg-blush-200 font-semibold text-xs uppercase tracking-wider transition-all shadow-md font-mono"
           >
-            <span>Switch to {viewRole === 'admin' ? 'Customer Storefront' : 'Admin View'}</span>
+            <span>Admin Sign Out</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

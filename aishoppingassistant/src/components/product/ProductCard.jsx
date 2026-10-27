@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { formatPrice, calculateDiscount } from '../../utils/formatters';
 import StarRating from '../common/StarRating';
 import Badge from '../common/Badge';
@@ -10,14 +12,35 @@ import Badge from '../common/Badge';
 export default function ProductCard({ product, layout = 'grid' }) {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isGuest, isAuthenticated } = useAuth();
+  const { showToast } = useNotification();
+  const navigate = useNavigate();
+
   const [justAdded, setJustAdded] = useState(false);
 
   const isFavorited = isInWishlist(product.id);
   const discountPercent = calculateDiscount(product.originalPrice, product.price);
 
+  // Intercept click on product details for Guest users
+  const handleViewDetails = (e) => {
+    if (isGuest || !isAuthenticated) {
+      e.preventDefault();
+      showToast('Please sign in with a registered account to view complete piece specifications.', 'info');
+      navigate('/login', { state: { from: `/product/${product.id}` } });
+    }
+  };
+
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Intercept Add to Cart for Guest users
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to add pieces to your shopping bag.', 'info');
+      navigate('/login', { state: { from: `/product/${product.id}` } });
+      return;
+    }
+
     addToCart(product, 1);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1200);
@@ -26,13 +49,25 @@ export default function ProductCard({ product, layout = 'grid' }) {
   const handleToggleWishlist = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Intercept Wishlist for Guest users
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to save items to your wishlist.', 'info');
+      navigate('/login', { state: { from: `/product/${product.id}` } });
+      return;
+    }
+
     toggleWishlist(product);
   };
 
   if (layout === 'list') {
     return (
       <div className="group bg-white rounded-3xl border border-mocha-200/80 p-5 shadow-xs hover:shadow-xl hover:border-blush-300 transition-all duration-500 flex flex-col sm:flex-row gap-6 items-center">
-        <Link to={`/product/${product.id}`} className="relative w-full sm:w-52 h-52 bg-[#F4ECE1] rounded-2xl overflow-hidden shrink-0 block">
+        <Link
+          to={`/product/${product.id}`}
+          onClick={handleViewDetails}
+          className="relative w-full sm:w-52 h-52 bg-[#F4ECE1] rounded-2xl overflow-hidden shrink-0 block"
+        >
           <img
             src={product.image}
             alt={product.name}
@@ -65,7 +100,11 @@ export default function ProductCard({ product, layout = 'grid' }) {
               </button>
             </div>
 
-            <Link to={`/product/${product.id}`} className="block">
+            <Link
+              to={`/product/${product.id}`}
+              onClick={handleViewDetails}
+              className="block"
+            >
               <h3 className="font-serif text-xl text-mocha-950 font-normal hover:text-blush-700 transition-colors line-clamp-1 mb-1 tracking-tight">
                 {product.name}
               </h3>
@@ -125,7 +164,11 @@ export default function ProductCard({ product, layout = 'grid' }) {
     <div className="group bg-white rounded-3xl border border-mocha-200/80 overflow-hidden shadow-xs hover:shadow-2xl hover:border-blush-300 transition-all duration-500 flex flex-col h-full transform hover:-translate-y-1">
       {/* Product Image & Badges */}
       <div className="relative aspect-square w-full bg-[#F4ECE1] overflow-hidden">
-        <Link to={`/product/${product.id}`} className="block w-full h-full">
+        <Link
+          to={`/product/${product.id}`}
+          onClick={handleViewDetails}
+          className="block w-full h-full"
+        >
           <img
             src={product.image}
             alt={product.name}
@@ -172,7 +215,11 @@ export default function ProductCard({ product, layout = 'grid' }) {
             <StarRating rating={product.rating} count={product.reviewsCount} size="xs" />
           </div>
 
-          <Link to={`/product/${product.id}`} className="block group-hover:text-blush-700 transition-colors">
+          <Link
+            to={`/product/${product.id}`}
+            onClick={handleViewDetails}
+            className="block group-hover:text-blush-700 transition-colors"
+          >
             <h3 className="font-serif text-lg font-normal text-mocha-950 line-clamp-1 mb-1 tracking-tight" title={product.name}>
               {product.name}
             </h3>

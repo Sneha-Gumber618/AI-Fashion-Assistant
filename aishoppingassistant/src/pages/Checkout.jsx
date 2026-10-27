@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,33 +13,44 @@ import {
   Lock,
   ArrowRight,
   Sparkles,
-  ShoppingBag
+  ShoppingBag,
+  Code,
+  Layers,
+  Cpu
 } from 'lucide-react';
 
 export default function Checkout() {
   const { cartItems, grandTotal, subtotal, discountAmount, shippingFee, clearCart } = useCart();
-  const { currentUser, placeOrder } = useAuth();
+  const { currentUser, isGuest, isAuthenticated, placeOrder } = useAuth();
   const { showToast } = useNotification();
   const navigate = useNavigate();
 
+  // Redirect guest or unauthenticated user to login
+  useEffect(() => {
+    if (isGuest || !isAuthenticated) {
+      showToast('Please sign in with a registered account to complete your checkout.', 'info');
+      navigate('/login', { state: { from: '/checkout' } });
+    }
+  }, [isGuest, isAuthenticated, navigate, showToast]);
+
   const [shippingData, setShippingData] = useState({
-    fullName: currentUser?.name || 'Alex Johnson',
-    email: currentUser?.email || 'alex@example.com',
-    phone: currentUser?.phone || '9876543210',
-    street: currentUser?.address?.street || '42 Orchid Blossom Road',
-    city: currentUser?.address?.city || 'Bengaluru',
-    state: currentUser?.address?.state || 'Karnataka',
-    pincode: currentUser?.address?.pincode || '560100'
+    fullName: currentUser?.name && currentUser.name !== 'Guest Explorer' ? currentUser.name : '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    street: currentUser?.address?.street || '',
+    city: currentUser?.address?.city || '',
+    state: currentUser?.address?.state || '',
+    pincode: currentUser?.address?.pincode || ''
   });
 
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [cardData, setCardData] = useState({
-    cardNumber: '•••• •••• •••• 4242',
-    cardHolder: 'ALEX JOHNSON',
-    expiry: '12/28',
-    cvv: '•••'
+    cardNumber: '',
+    cardHolder: '',
+    expiry: '',
+    cvv: ''
   });
-  const [upiId, setUpiId] = useState('alex@okhdfcbank');
+  const [upiId, setUpiId] = useState('');
 
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +62,7 @@ export default function Checkout() {
           🛍️
         </div>
         <h2 className="font-serif text-2xl text-mocha-950 font-normal">Your bag is empty</h2>
-        <p className="text-xs text-mocha-500 font-sans">Select items before checking out.</p>
+        <p className="text-xs text-mocha-500 font-sans">Select items from our collection before checking out.</p>
         <Link to="/products" className="inline-block px-6 py-3 bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] rounded-full text-xs uppercase tracking-wider font-semibold transition-colors">
           Explore Pieces
         </Link>
@@ -67,13 +78,18 @@ export default function Checkout() {
   const handlePlaceOrder = (e) => {
     e.preventDefault();
 
-    if (!shippingData.fullName || !shippingData.phone || !shippingData.street || !shippingData.pincode) {
-      showToast('Please complete all mandatory shipping details.', 'warning');
+    if (!shippingData.fullName.trim()) {
+      showToast('Please provide your full recipient name.', 'warning');
       return;
     }
 
-    if (shippingData.phone.length < 10) {
-      showToast('Please enter a valid 10-digit mobile number.', 'warning');
+    if (!shippingData.phone.trim() || shippingData.phone.trim().length < 10) {
+      showToast('Please provide a valid 10-digit mobile number.', 'warning');
+      return;
+    }
+
+    if (!shippingData.street.trim() || !shippingData.city.trim() || !shippingData.state.trim() || !shippingData.pincode.trim()) {
+      showToast('Please complete all street, city, state, and PIN code delivery details.', 'warning');
       return;
     }
 
@@ -87,7 +103,8 @@ export default function Checkout() {
         discount: discountAmount,
         shippingFee,
         shippingAddress: shippingData,
-        paymentMethod: paymentMethod.toUpperCase()
+        paymentMethod: paymentMethod.toUpperCase(),
+        paymentDetails: paymentMethod === 'upi' ? { upiId } : paymentMethod === 'card' ? { cardHolder: cardData.cardHolder || shippingData.fullName } : { type: 'COD' }
       });
 
       clearCart();
@@ -106,7 +123,7 @@ export default function Checkout() {
 
         <div>
           <span className="text-[10px] font-mono font-bold text-blush-700 uppercase tracking-[0.25em]">
-            Atelier Confirmation
+            Atelier Order Confirmation
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-light text-mocha-950 tracking-tight mt-1">
             Thank You for Your Patronage
@@ -207,43 +224,46 @@ export default function Checkout() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
-                  Full Name *
+                  Full Recipient Name *
                 </label>
                 <input
                   type="text"
                   name="fullName"
                   required
+                  placeholder="e.g. Eleanor Vance"
                   value={shippingData.fullName}
                   onChange={handleInputChange}
-                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
-                  10-Digit Mobile *
+                  10-Digit Mobile Phone *
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   required
+                  placeholder="9876543210"
                   value={shippingData.phone}
                   onChange={handleInputChange}
-                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
-                  Street Address / Flat / Floor *
+                  Street Address / Apartment / Suite *
                 </label>
                 <input
                   type="text"
                   name="street"
                   required
+                  placeholder="Flat 4B, Heritage Crest Boulevard"
                   value={shippingData.street}
                   onChange={handleInputChange}
-                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                 />
               </div>
 
@@ -255,9 +275,10 @@ export default function Checkout() {
                   type="text"
                   name="city"
                   required
+                  placeholder="Bengaluru"
                   value={shippingData.city}
                   onChange={handleInputChange}
-                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                  className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                 />
               </div>
 
@@ -270,9 +291,10 @@ export default function Checkout() {
                     type="text"
                     name="state"
                     required
+                    placeholder="Karnataka"
                     value={shippingData.state}
                     onChange={handleInputChange}
-                    className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                    className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                   />
                 </div>
                 <div>
@@ -283,26 +305,34 @@ export default function Checkout() {
                     type="text"
                     name="pincode"
                     required
+                    placeholder="560100"
                     value={shippingData.pincode}
                     onChange={handleInputChange}
-                    className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500"
+                    className="w-full text-xs p-3 rounded-2xl border border-mocha-200 focus:outline-none focus:border-blush-500 bg-[#FAF7F2]"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step 2: Payment Selection */}
+          {/* Step 2: Payment Method */}
           <div className="bg-white rounded-3xl border border-mocha-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-3 pb-3 border-b border-mocha-100">
-              <span className="w-7 h-7 rounded-full bg-mocha-900 text-[#FAF7F2] font-mono font-bold text-xs flex items-center justify-center">
-                2
-              </span>
-              <h3 className="font-serif text-lg text-mocha-950">
-                Payment Method
-              </h3>
+            <div className="flex items-center justify-between pb-3 border-b border-mocha-100">
+              <div className="flex items-center gap-3">
+                <span className="w-7 h-7 rounded-full bg-mocha-900 text-[#FAF7F2] font-mono font-bold text-xs flex items-center justify-center">
+                  2
+                </span>
+                <h3 className="font-serif text-lg text-mocha-950">
+                  Payment Method
+                </h3>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>256-Bit SSL Encrypted</span>
+              </div>
             </div>
 
+            {/* Payment Method Selector */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 type="button"
@@ -347,40 +377,54 @@ export default function Checkout() {
               </button>
             </div>
 
-            {/* Simulated Payment Sub-form */}
+            {/* Payment Sub-forms */}
             {paymentMethod === 'card' && (
               <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-mocha-200 text-xs space-y-3 animate-fade-in">
                 <div className="flex justify-between items-center text-mocha-500 text-[11px] font-mono">
-                  <span>Simulated Safe Card</span>
+                  <span>Credit / Debit Card Details</span>
                   <span className="flex items-center gap-1 text-emerald-800 font-bold">
-                    <Lock className="w-3 h-3" /> 256-Bit SSL
+                    <Lock className="w-3 h-3" /> 256-Bit SSL Encrypted
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
+                    <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600 mb-1">Name on Card</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Eleanor Vance"
+                      value={cardData.cardHolder}
+                      onChange={(e) => setCardData(prev => ({ ...prev, cardHolder: e.target.value }))}
+                      className="w-full p-2.5 rounded-xl bg-white border border-mocha-200 font-mono"
+                    />
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600 mb-1">Card Number</label>
                     <input
                       type="text"
-                      readOnly
+                      placeholder="4532 •••• •••• 8891"
                       value={cardData.cardNumber}
+                      onChange={(e) => setCardData(prev => ({ ...prev, cardNumber: e.target.value }))}
                       className="w-full p-2.5 rounded-xl bg-white border border-mocha-200 font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600 mb-1">Expiry</label>
+                    <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600 mb-1">Expiry (MM/YY)</label>
                     <input
                       type="text"
-                      readOnly
+                      placeholder="12/28"
                       value={cardData.expiry}
+                      onChange={(e) => setCardData(prev => ({ ...prev, expiry: e.target.value }))}
                       className="w-full p-2.5 rounded-xl bg-white border border-mocha-200 font-mono"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600 mb-1">CVV</label>
                     <input
-                      type="text"
-                      readOnly
+                      type="password"
+                      maxLength={4}
+                      placeholder="•••"
                       value={cardData.cvv}
+                      onChange={(e) => setCardData(prev => ({ ...prev, cvv: e.target.value }))}
                       className="w-full p-2.5 rounded-xl bg-white border border-mocha-200 font-mono"
                     />
                   </div>
@@ -390,13 +434,13 @@ export default function Checkout() {
 
             {paymentMethod === 'upi' && (
               <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-mocha-200 text-xs space-y-2 animate-fade-in">
-                <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600">Enter UPI Virtual ID</label>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-mocha-600">Enter UPI Virtual ID (VPA)</label>
                 <input
                   type="text"
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-white border border-mocha-200 font-mono"
-                  placeholder="username@upi"
+                  placeholder="yourname@okhdfcbank"
                 />
               </div>
             )}
@@ -405,7 +449,7 @@ export default function Checkout() {
               <div className="p-4 bg-blush-50/60 rounded-2xl border border-blush-200 text-xs text-mocha-800 space-y-1 animate-fade-in">
                 <p className="font-bold">Pay via Cash / QR code upon delivery</p>
                 <p className="text-[11px] text-mocha-600">
-                  Please keep exact currency or UPI app ready when package arrives.
+                  Please keep exact currency or UPI app ready when package arrives at your doorstep.
                 </p>
               </div>
             )}

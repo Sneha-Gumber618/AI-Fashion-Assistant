@@ -21,6 +21,7 @@ import AiAssistantPage from './pages/AiAssistantPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
+import AdminLogin from './pages/AdminLogin';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
                     <Route path="login" element={<Login />} />
                     <Route path="register" element={<Register />} />
                     <Route path="admin" element={<Admin />} />
+                    <Route path="admin/login" element={<AdminLogin />} />
                     
                     {/* Fallback 404 Route */}
                     <Route path="*" element={<NotFound />} />
