@@ -1,6 +1,6 @@
 # ShopAI — Luxury Aesthetic Atelier, AI Stylist & Merchant Portal
 
-ShopAI is an intelligent luxury e-commerce platform and merchant marketplace built with **React 19, Vite, React Router v7, Context API, Axios, Tailwind CSS**, and a **Node.js HTTP Server**, adhering strictly to the **Front-End & Back-End Engineering Syllabus (Course & Lab Plan 24CAI0303)**.
+ShopAI is an intelligent luxury e-commerce platform and merchant marketplace built with **React 19, Vite, React Router v7, Context API, Axios, Tailwind CSS**, and a **Node.js and Express**, adhering strictly to the **Front-End & Back-End Engineering Syllabus (Course & Lab Plan 24CAI0303)**.
 
 ---
 
@@ -59,7 +59,9 @@ npm run dev
 ```
 Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
-### Start Backend (Node.js HTTP Server)
+### Start Backend (Express)
+Copy `.env.example` to `.env` and set a unique `JWT_SECRET` before starting the backend.
+
 ```powershell
 npm run server
 ```

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { formatPrice, formatDate } from '../utils/formatters';
+import { uploadProductImageAPI, listUploadedFilesAPI } from '../services/api';
 import {
   PackagePlus,
   Boxes,
@@ -18,7 +19,13 @@ import {
   ArrowRight,
   Eye,
   Plus,
-  Minus
+  Minus,
+  Upload,
+  ImagePlus,
+  FileImage,
+  X,
+  CloudUpload,
+  Copy
 } from 'lucide-react';
 
 export default function Admin() {
@@ -40,7 +47,79 @@ export default function Admin() {
     featuresText: 'Premium craftsmanship, Modern minimalist silhouette, High-durability materials'
   });
 
-  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'inventory' | 'orders'
+  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'inventory' | 'orders' | 'upload'
+
+  // ── Multer Upload State ───────────────────────────────────────────────────
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('idle'); // 'idle'|'uploading'|'success'|'error'
+  const [uploadResult, setUploadResult] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = (file) => {
+    if (!file) return;
+    // Client-side regex validation — mirrors server multer.config.js
+    const allowedMime = /^image\/(jpeg|jpg|png|webp|gif)$/;
+    if (!allowedMime.test(file.type)) {
+      showToast('Only JPEG, PNG, WebP, or GIF images are allowed.', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File too large. Maximum size is 5MB.', 'error');
+      return;
+    }
+    setUploadFile(file);
+    setUploadPreview(URL.createObjectURL(file));
+    setUploadStatus('idle');
+    setUploadResult(null);
+    setUploadProgress(0);
+  };
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    handleFileSelect(file);
+  }, []);
+
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      showToast('Please select an image first.', 'warning');
+      return;
+    }
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+    try {
+      const data = await uploadProductImageAPI(uploadFile, (pct) => setUploadProgress(pct));
+      if (data.success) {
+        setUploadStatus('success');
+        setUploadResult(data.data);
+        setUploadedFiles(prev => [data.data, ...prev]);
+        showToast('Product image uploaded successfully! ✨', 'success');
+      }
+    } catch (err) {
+      setUploadStatus('error');
+      const msg = err.response?.data?.message || 'Upload failed. Make sure the server is running.';
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleCopyUrl = (url) => {
+    navigator.clipboard.writeText(`http://localhost:5000${url}`);
+    showToast('Image URL copied to clipboard!', 'success');
+  };
+
+  const clearUpload = () => {
+    setUploadFile(null);
+    setUploadPreview(null);
+    setUploadStatus('idle');
+    setUploadResult(null);
+    setUploadProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Calculations for Admin Analytics Dashboard
   const totalRevenue = orders.reduce((acc, ord) => acc + ord.totalAmount, 0);
@@ -179,8 +258,8 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Tabs: Register Product vs. Inventory vs. Orders */}
-      <div className="border-b border-mocha-200 flex gap-6 text-xs font-mono uppercase tracking-wider">
+      {/* Tabs: Register Product vs. Inventory vs. Orders vs. Upload */}
+      <div className="border-b border-mocha-200 flex flex-wrap gap-6 text-xs font-mono uppercase tracking-wider">
         <button
           onClick={() => setActiveTab('register')}
           className={`pb-3.5 font-bold transition-all relative ${
@@ -213,6 +292,18 @@ export default function Admin() {
         >
           🛵 Order Fulfillment ({orders.length})
           {activeTab === 'orders' && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-mocha-950 rounded-full"></span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('upload')}
+          className={`pb-3.5 font-bold transition-all relative ${
+            activeTab === 'upload' ? 'text-mocha-950' : 'text-mocha-400 hover:text-mocha-700'
+          }`}
+        >
+          🖼️ Image Upload (Multer)
+          {activeTab === 'upload' && (
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-mocha-950 rounded-full"></span>
           )}
         </button>
@@ -605,6 +696,202 @@ export default function Admin() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Multer Product Image Upload */}
+      {activeTab === 'upload' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Upload Panel */}
+          <div className="bg-white rounded-3xl border border-mocha-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-blush-700 font-bold block mb-1">
+                Multer File Upload
+              </span>
+              <h2 className="font-serif text-2xl font-normal text-mocha-950">
+                Upload Product Image
+              </h2>
+              <p className="text-xs text-mocha-500 font-sans mt-0.5">
+                Upload is handled by <strong>Multer</strong> on the Express server. Files are saved to <code className="bg-mocha-100 px-1 rounded text-[10px]">public/uploads/</code>. JWT auth is required.
+              </p>
+            </div>
+
+            {/* Drag & Drop Zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
+                isDragOver
+                  ? 'border-blush-500 bg-blush-50'
+                  : uploadFile
+                  ? 'border-emerald-400 bg-emerald-50'
+                  : 'border-mocha-300 hover:border-blush-400 hover:bg-blush-50/40'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files[0])}
+              />
+
+              {uploadPreview ? (
+                <>
+                  <img
+                    src={uploadPreview}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-xl shadow-md"
+                  />
+                  <div className="text-center">
+                    <p className="text-xs font-mono font-bold text-mocha-800">{uploadFile?.name}</p>
+                    <p className="text-[10px] text-mocha-400 font-mono">
+                      {(uploadFile?.size / 1024).toFixed(1)} KB · {uploadFile?.type}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-2xl bg-mocha-100 flex items-center justify-center">
+                    <CloudUpload className="w-8 h-8 text-mocha-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-mono font-bold text-mocha-700">Drag & drop or click to select</p>
+                    <p className="text-[10px] text-mocha-400 font-mono mt-1">
+                      JPEG · PNG · WebP · GIF · Max 5MB
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Progress Bar */}
+            {uploadStatus === 'uploading' && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-mono text-mocha-500">
+                  <span>Uploading to server...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-mocha-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-2 bg-gradient-to-r from-blush-500 to-mocha-700 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Success Result */}
+            {uploadStatus === 'success' && uploadResult && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-mono font-bold text-emerald-700">Upload Successful!</p>
+                </div>
+                <div className="flex items-center gap-2 bg-white rounded-xl p-2 border border-emerald-200">
+                  <code className="text-[10px] text-mocha-700 flex-1 truncate font-mono">
+                    http://localhost:5000{uploadResult.url}
+                  </code>
+                  <button
+                    onClick={() => handleCopyUrl(uploadResult.url)}
+                    className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors"
+                    title="Copy URL"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-mocha-400 font-mono">
+                  Size: {(uploadResult.size / 1024).toFixed(1)} KB · Uploaded by: {uploadResult.uploadedBy}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || uploadStatus === 'uploading'}
+                className="flex-1 py-3.5 rounded-full bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] font-semibold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadStatus === 'uploading' ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Upload to Server</>
+                )}
+              </button>
+              {uploadFile && (
+                <button
+                  onClick={clearUpload}
+                  className="px-4 py-3.5 rounded-full border border-mocha-300 hover:bg-mocha-100 text-mocha-600 transition-colors"
+                  title="Clear"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Uploaded Files Gallery */}
+          <div className="bg-white rounded-3xl border border-mocha-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-blush-700 font-bold block mb-1">
+                  Uploaded This Session
+                </span>
+                <h3 className="font-serif text-xl font-normal text-mocha-950">Image Gallery</h3>
+              </div>
+              <span className="text-[10px] font-mono bg-mocha-100 text-mocha-600 px-3 py-1 rounded-full uppercase font-bold">
+                {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {uploadedFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-mocha-300">
+                <FileImage className="w-12 h-12" />
+                <p className="text-xs font-mono text-center">
+                  No images uploaded yet.<br />Use the panel on the left to upload.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="rounded-2xl overflow-hidden border border-mocha-200 group relative">
+                    <img
+                      src={`http://localhost:5000${file.url}`}
+                      alt={file.originalName}
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="p-2 bg-white">
+                      <p className="text-[10px] font-mono text-mocha-700 truncate font-bold">{file.originalName}</p>
+                      <p className="text-[9px] font-mono text-mocha-400">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopyUrl(file.url)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/80 backdrop-blur-sm text-mocha-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                      title="Copy URL"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tech explanation */}
+            <div className="bg-mocha-50 rounded-2xl p-4 space-y-2 border border-mocha-100">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-mocha-500 font-bold">How Multer Works Here</p>
+              <div className="space-y-1 text-[10px] font-mono text-mocha-600">
+                <p>① React sends <code className="bg-mocha-200 px-1 rounded">multipart/form-data</code> via axios</p>
+                <p>② JWT Bearer token auto-attached by Axios interceptor</p>
+                <p>③ Express <code className="bg-mocha-200 px-1 rounded">verifyToken</code> middleware validates JWT</p>
+                <p>④ Multer validates MIME type via <code className="bg-mocha-200 px-1 rounded">/^image\/(jpeg|png|webp)$/</code></p>
+                <p>⑤ File saved to <code className="bg-mocha-200 px-1 rounded">public/uploads/</code> with unique timestamp name</p>
+                <p>⑥ Server returns public URL for use in product listings</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
