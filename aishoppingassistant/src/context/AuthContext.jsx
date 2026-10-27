@@ -1,47 +1,66 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/**
+ * AuthContext — Updated to use Express API + JWT + Bcrypt
+ *
+ * Login and Register now call the real backend API.
+ * JWT token is stored in localStorage and auto-attached to all requests.
+ * Passwords are NEVER stored client-side — bcrypt handles it on the server.
+ */
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { useNotification } from './NotificationContext';
+import { loginUserAPI, registerUserAPI, getMeAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
-const DEMO_USER = {
-  id: 'usr_demo',
-  name: 'Alex Johnson',
-  email: 'alex@example.com',
-  phone: '+91 98765 43210',
-  address: {
-    street: '42 Orchid Blossom Road, Tech Park Avenue',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    pincode: '560100'
+const TOKEN_KEY = 'shopai_auth_token';
+const USER_KEY = 'shopai_user';
+
+// ─── Helper: Check if JWT token is expired ────────────────────────────────────
+function isTokenExpired(token) {
+  try {
+    const decoded = jwtDecode(token);
+    // decoded.exp is in seconds; Date.now() is in milliseconds
+    return decoded.exp * 1000 < Date.now();
+  } catch {
+    return true; // If decode fails, treat as expired
   }
-};
+}
+
+// ─── Helper: Get token from localStorage ─────────────────────────────────────
+function getStoredToken() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
+  return token;
+}
 
 export function AuthProvider({ children }) {
   const { showToast, triggerMobilePush } = useNotification();
-  
+
   // View mode: 'customer' | 'admin'
   const [viewRole, setViewRole] = useState(() => {
-    try {
-      return localStorage.getItem('shopai_view_role') || 'customer';
-    } catch {
-      return 'customer';
-    }
+    try { return localStorage.getItem('shopai_view_role') || 'customer'; }
+    catch { return 'customer'; }
   });
 
+  // Initialize user from stored JWT — only if token is still valid
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('shopai_user');
+      const token = getStoredToken();
+      if (!token) return null;
+      const saved = localStorage.getItem(USER_KEY);
       return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   });
 
   const [orders, setOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('shopai_orders');
       if (saved) return JSON.parse(saved);
-      // Pre-seed a sample order for demonstration
       return [
         {
           id: 'ORD-894210',
@@ -49,46 +68,30 @@ export function AuthProvider({ children }) {
           status: 'In Transit',
           totalAmount: 2499,
           items: [
-            {
-              id: 4,
-              name: "AeroBeat Headphones",
-              price: 2499,
-              quantity: 1,
-              category: "Electronics",
-              image: "/images/aerobeat.jpg"
-            }
+            { id: 4, name: "AeroBeat Headphones", price: 2499, quantity: 1, category: "Electronics", image: "/images/aerobeat.jpg" }
           ],
-          shippingAddress: {
-            fullName: 'Alex Johnson',
-            phone: '9876543210',
-            street: '42 Orchid Blossom Road',
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            pincode: '560100'
-          },
+          shippingAddress: { fullName: 'Alex Johnson', phone: '9876543210', street: '42 Orchid Blossom Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
           paymentMethod: 'UPI'
         }
       ];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
-  useEffect(() => {
-    localStorage.setItem('shopai_view_role', viewRole);
-  }, [viewRole]);
+  // Persist viewRole
+  useEffect(() => { localStorage.setItem('shopai_view_role', viewRole); }, [viewRole]);
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('shopai_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('shopai_user');
-    }
-  }, [currentUser]);
+  // Persist orders
+  useEffect(() => { localStorage.setItem('shopai_orders', JSON.stringify(orders)); }, [orders]);
 
+  // ─── Listen for 401 Unauthorized (token expired mid-session) ──────────────
   useEffect(() => {
-    localStorage.setItem('shopai_orders', JSON.stringify(orders));
-  }, [orders]);
+    const handleUnauthorized = () => {
+      setCurrentUser(null);
+      showToast('Your session has expired. Please log in again.', 'warning');
+    };
+    window.addEventListener('shopai:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('shopai:unauthorized', handleUnauthorized);
+  }, [showToast]);
 
   const toggleViewRole = () => {
     const nextRole = viewRole === 'customer' ? 'admin' : 'customer';
@@ -101,132 +104,120 @@ export function AuthProvider({ children }) {
     );
   };
 
-  const login = (email, password) => {
+  // ─── LOGIN — calls Express API (bcrypt compare on server, JWT returned) ────
+  const login = useCallback(async (email, password) => {
     if (!email || !password) {
-      showToast('Please enter both email and password', 'error');
+      showToast('Please enter both email and password.', 'error');
       return false;
     }
 
-    const users = JSON.parse(localStorage.getItem('shopai_registered_users') || '[]');
-    const existing = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      const data = await loginUserAPI({ email, password });
 
-    if (existing) {
-      if (existing.password === password) {
-        setCurrentUser(existing);
-        showToast(`Welcome back, ${existing.name}! ✨`, 'success');
+      if (data.success) {
+        // Store JWT token
+        localStorage.setItem(TOKEN_KEY, data.token);
+        // Store user profile (no password — bcrypt handled it on server)
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        setCurrentUser(data.user);
+        showToast(`Welcome back, ${data.user.name}! ✨`, 'success');
         return true;
-      } else {
-        showToast('Incorrect password. Please try again.', 'error');
-        return false;
       }
-    } else if (email.toLowerCase() === 'alex@example.com' && password === 'password123') {
-      setCurrentUser(DEMO_USER);
-      showToast('Logged in as Demo User Alex! 🎉', 'success');
-      return true;
-    } else {
-      const newUser = {
-        id: 'usr_' + Date.now(),
-        name: email.split('@')[0],
-        email,
-        phone: '+91 98765 43210',
-        address: DEMO_USER.address
-      };
-      setCurrentUser(newUser);
-      showToast(`Welcome to ShopAI, ${newUser.name}!`, 'success');
-      return true;
+    } catch (error) {
+      // API returned an error response (401, 400, etc.)
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      showToast(message, 'error');
+      return false;
     }
-  };
 
-  const register = (name, email, password) => {
+    return false;
+  }, [showToast]);
+
+  // ─── REGISTER — calls Express API (bcrypt hash on server, JWT returned) ───
+  const register = useCallback(async (name, email, password) => {
     if (!name || !email || !password) {
       showToast('Please complete all required fields.', 'error');
       return false;
     }
-    if (password.length < 6) {
-      showToast('Password must be at least 6 characters long.', 'warning');
-      return false;
-    }
 
-    const users = JSON.parse(localStorage.getItem('shopai_registered_users') || '[]');
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      showToast('An account with this email already exists.', 'error');
-      return false;
-    }
+    try {
+      const data = await registerUserAPI({ name, email, password });
 
-    const newUser = {
-      id: 'usr_' + Date.now(),
-      name,
-      email,
-      password,
-      phone: '+91 98765 43210',
-      address: {
-        street: '12 Cyber Way, Silicon Crescent',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400001'
+      if (data.success) {
+        // Store JWT token
+        localStorage.setItem(TOKEN_KEY, data.token);
+        // Store user profile
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        setCurrentUser(data.user);
+        showToast('Account created successfully! Welcome to ShopAI 🚀', 'success');
+        return true;
       }
-    };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      showToast(message, 'error');
+      return false;
+    }
 
-    users.push(newUser);
-    localStorage.setItem('shopai_registered_users', JSON.stringify(users));
-    setCurrentUser(newUser);
-    showToast('Account registered successfully! Welcome aboard 🚀', 'success');
-    return true;
-  };
+    return false;
+  }, [showToast]);
 
-  const logout = () => {
+  // ─── LOGOUT ───────────────────────────────────────────────────────────────
+  const logout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setCurrentUser(null);
     showToast('You have been logged out.', 'info');
-  };
+  }, [showToast]);
 
-  const updateProfile = (data) => {
-    setCurrentUser(prev => ({
-      ...prev,
-      ...data
-    }));
-    showToast('Profile information updated successfully.', 'success');
-  };
+  // ─── UPDATE PROFILE ───────────────────────────────────────────────────────
+  const updateProfile = useCallback((data) => {
+    setCurrentUser((prev) => {
+      const updated = { ...prev, ...data };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    showToast('Profile updated successfully.', 'success');
+  }, [showToast]);
 
-  const placeOrder = (orderDetails) => {
+  // ─── PLACE ORDER ──────────────────────────────────────────────────────────
+  const placeOrder = useCallback((orderDetails) => {
     const newOrder = {
       id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
       createdAt: new Date().toISOString(),
       status: 'Confirmed',
       estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      ...orderDetails
+      ...orderDetails,
     };
 
-    setOrders(prev => [newOrder, ...prev]);
+    setOrders((prev) => [newOrder, ...prev]);
 
-    // Zomato/Swiggy style smartphone push notification
     triggerMobilePush({
       title: `🛵 Order ${newOrder.id} Placed!`,
-      message: `Your payment of ₹${newOrder.totalAmount} was successful. Our atelier is packing your ${newOrder.items.length} item(s)!`,
+      message: `Your payment of ₹${newOrder.totalAmount} was successful. Packing your ${newOrder.items.length} item(s)!`,
       type: 'order',
       link: '/orders',
-      badgeText: 'Order Tracking'
+      badgeText: 'Order Tracking',
     });
 
     return newOrder;
-  };
+  }, [triggerMobilePush]);
 
-  // Admin function: Update order shipment status
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(prev =>
-      prev.map(ord => ord.id === orderId ? { ...ord, status: newStatus } : ord)
+  // ─── UPDATE ORDER STATUS (Admin) ──────────────────────────────────────────
+  const updateOrderStatus = useCallback((orderId, newStatus) => {
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
     );
 
-    // Trigger Swiggy/Zomato style phone push notification
     triggerMobilePush({
       title: `🛵 Shipment Milestone: ${newStatus}`,
       message: `Order #${orderId} is now ${newStatus}! Tap to track live shipment.`,
       type: 'order',
       link: '/orders',
-      badgeText: 'Live Tracking'
+      badgeText: 'Live Tracking',
     });
 
-    showToast(`Order #${orderId} status updated to ${newStatus}! Customer notified.`, 'success');
-  };
+    showToast(`Order #${orderId} status updated to ${newStatus}!`, 'success');
+  }, [showToast, triggerMobilePush]);
 
   return (
     <AuthContext.Provider
@@ -242,7 +233,7 @@ export function AuthProvider({ children }) {
         updateProfile,
         orders,
         placeOrder,
-        updateOrderStatus
+        updateOrderStatus,
       }}
     >
       {children}

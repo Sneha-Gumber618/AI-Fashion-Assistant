@@ -1,48 +1,130 @@
+/**
+ * API Service — Axios Instance
+ * Handles all HTTP requests to the ShopAI Express backend.
+ *
+ * Features:
+ * - JWT auto-attach on every request via request interceptor
+ * - 401 Unauthorized auto-logout via response interceptor
+ * - Graceful fallback to local data when server is unreachable
+ */
+
 import axios from 'axios';
 import { INITIAL_PRODUCTS } from '../data/products';
 
-// Create Axios Instance with default configuration
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// ─── Main API Instance (Products, Orders, etc.) ────────────────────────────────
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
-  timeout: 4000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
+  baseURL: BASE_URL,
+  timeout: 6000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Request Interceptor: Log outgoing requests & simulate auth token headers
-api.interceptors.request.use(
-  (config) => {
-    // console.log(`[Axios Request] ${config.method?.toUpperCase()} ${config.url}`);
-    const token = localStorage.getItem('shopai_auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// ─── Auth API Instance (Register, Login, /me) ──────────────────────────────────
+export const authApi = axios.create({
+  baseURL: BASE_URL,
+  timeout: 6000,
+  headers: { 'Content-Type': 'application/json' },
+});
 
-// Response Interceptor: Handle errors globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.warn('[Axios API Notice] Backend endpoint not reachable, switching seamlessly to local client dataset:', error.message);
-    return Promise.reject(error);
+// ─── Request Interceptor: Attach JWT Bearer Token ──────────────────────────────
+const attachToken = (config) => {
+  const token = localStorage.getItem('shopai_auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+};
+
+api.interceptors.request.use(attachToken, (error) => Promise.reject(error));
+authApi.interceptors.request.use(attachToken, (error) => Promise.reject(error));
+
+// ─── Response Interceptor: Handle 401 Unauthorized ────────────────────────────
+const handleUnauthorized = (error) => {
+  if (error.response?.status === 401) {
+    // Token expired or invalid — clear auth state and redirect to login
+    localStorage.removeItem('shopai_auth_token');
+    localStorage.removeItem('shopai_user');
+    // Dispatch a custom event so AuthContext can react
+    window.dispatchEvent(new CustomEvent('shopai:unauthorized'));
+  }
+  return Promise.reject(error);
+};
+
+api.interceptors.response.use((res) => res, handleUnauthorized);
+authApi.interceptors.response.use((res) => res, handleUnauthorized);
+
+// ─── Auth API Functions ────────────────────────────────────────────────────────
 
 /**
- * Fetch all products with filtering, search and sorting
+ * Register a new user via Express API (bcrypt + JWT)
+ */
+export async function registerUserAPI({ name, email, password }) {
+  const response = await authApi.post('/auth/register', { name, email, password });
+  return response.data; // { success, token, user, message }
+}
+
+/**
+ * Login via Express API (bcrypt compare + JWT)
+ */
+export async function loginUserAPI({ email, password }) {
+  const response = await authApi.post('/auth/login', { email, password });
+  return response.data; // { success, token, user, message }
+}
+
+/**
+ * Get currently authenticated user profile from server
+ * Requires: Bearer token in Authorization header (auto-attached by interceptor)
+ */
+export async function getMeAPI() {
+  const response = await authApi.get('/auth/me');
+  return response.data; // { success, user }
+}
+
+// ─── Upload API Function ───────────────────────────────────────────────────────
+
+/**
+ * Upload a product image via Multer endpoint
+ * @param {File} file — The image File object from an <input type="file">
+ * @param {Function} onProgress — Optional upload progress callback (0–100)
+ */
+export async function uploadProductImageAPI(file, onProgress) {
+  const formData = new FormData();
+  formData.append('productImage', file); // Must match Multer field name
+
+  const response = await authApi.post('/upload/product-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percent);
+      }
+    },
+  });
+
+  return response.data; // { success, data: { filename, url, size, ... } }
+}
+
+/**
+ * List all uploaded product images
+ */
+export async function listUploadedFilesAPI() {
+  const response = await authApi.get('/upload/files');
+  return response.data;
+}
+
+// ─── Products API Functions ────────────────────────────────────────────────────
+
+/**
+ * Fetch all products with filtering, search and sorting.
+ * Falls back to local data if server is unreachable.
  */
 export async function fetchProductsFromAPI(params = {}) {
   try {
     const response = await api.get('/products', { params });
     return response.data;
   } catch (err) {
-    // Client-side fallback simulation with a realistic 300ms network delay
+    // Client-side fallback with a realistic 300ms network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     let items = [...INITIAL_PRODUCTS];
@@ -52,7 +134,6 @@ export async function fetchProductsFromAPI(params = {}) {
         (p) => p.category.toLowerCase() === params.category.toLowerCase()
       );
     }
-
     if (params.search && params.search.trim()) {
       const q = params.search.toLowerCase().trim();
       items = items.filter(
@@ -62,45 +143,22 @@ export async function fetchProductsFromAPI(params = {}) {
           p.category.toLowerCase().includes(q)
       );
     }
+    if (params.minPrice) items = items.filter((p) => p.price >= Number(params.minPrice));
+    if (params.maxPrice) items = items.filter((p) => p.price <= Number(params.maxPrice));
+    if (params.minRating) items = items.filter((p) => p.rating >= Number(params.minRating));
+    if (params.inStockOnly) items = items.filter((p) => p.inStock);
 
-    if (params.minPrice) {
-      items = items.filter((p) => p.price >= Number(params.minPrice));
-    }
+    if (params.sort === 'price-low') items.sort((a, b) => a.price - b.price);
+    else if (params.sort === 'price-high') items.sort((a, b) => b.price - a.price);
+    else if (params.sort === 'rating') items.sort((a, b) => b.rating - a.rating);
+    else if (params.sort === 'newest') items.sort((a, b) => b.id - a.id);
 
-    if (params.maxPrice) {
-      items = items.filter((p) => p.price <= Number(params.maxPrice));
-    }
-
-    if (params.minRating) {
-      items = items.filter((p) => p.rating >= Number(params.minRating));
-    }
-
-    if (params.inStockOnly) {
-      items = items.filter((p) => p.inStock);
-    }
-
-    // Sorting
-    if (params.sort === 'price-low') {
-      items.sort((a, b) => a.price - b.price);
-    } else if (params.sort === 'price-high') {
-      items.sort((a, b) => b.price - a.price);
-    } else if (params.sort === 'rating') {
-      items.sort((a, b) => b.rating - a.rating);
-    } else if (params.sort === 'newest') {
-      items.sort((a, b) => b.id - a.id);
-    }
-
-    return {
-      success: true,
-      count: items.length,
-      data: items,
-      source: 'client_store'
-    };
+    return { success: true, count: items.length, data: items, source: 'client_store' };
   }
 }
 
 /**
- * Fetch a single product by ID
+ * Fetch a single product by ID.
  */
 export async function fetchProductByIdFromAPI(id) {
   try {
@@ -113,18 +171,10 @@ export async function fetchProductByIdFromAPI(id) {
       try {
         const custom = JSON.parse(localStorage.getItem('shopai_custom_products') || '[]');
         product = custom.find((p) => p.id === Number(id));
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) { /* ignore */ }
     }
-    if (!product) {
-      throw new Error('Product not found');
-    }
-    return {
-      success: true,
-      data: product,
-      source: 'client_store'
-    };
+    if (!product) throw new Error('Product not found');
+    return { success: true, data: product, source: 'client_store' };
   }
 }
 
