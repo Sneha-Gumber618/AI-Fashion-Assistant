@@ -61,7 +61,7 @@ export default function Admin() {
 
   const [activeTab, setActiveTab] = useState('register'); // 'register' | 'inventory' | 'orders' | 'upload'
 
-  // ── Multer Upload State ───────────────────────────────────────────────────
+  // ── Image Upload State ───────────────────────────────────────────────────
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPreview, setUploadPreview] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -73,7 +73,7 @@ export default function Admin() {
 
   const handleFileSelect = (file) => {
     if (!file) return;
-    // Client-side regex validation — mirrors server multer.config.js
+    // Client-side regex validation — mirrors server image upload config
     const allowedMime = /^image\/(jpeg|jpg|png|webp|gif)$/;
     if (!allowedMime.test(file.type)) {
       showToast('Only JPEG, PNG, WebP, or GIF images are allowed.', 'error');
@@ -325,7 +325,7 @@ export default function Admin() {
             activeTab === 'upload' ? 'text-mocha-950' : 'text-mocha-400 hover:text-mocha-700'
           }`}
         >
-          🖼️ Image Upload (Multer)
+          🖼️ Image Upload
           {activeTab === 'upload' && (
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-mocha-950 rounded-full"></span>
           )}
@@ -723,20 +723,20 @@ export default function Admin() {
         </div>
       )}
 
-      {/* TAB 4: Multer Product Image Upload */}
+      {/* TAB 4: Product Image Upload */}
       {activeTab === 'upload' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upload Panel */}
           <div className="bg-white rounded-3xl border border-mocha-200 p-6 sm:p-8 shadow-xs space-y-6">
             <div>
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-blush-700 font-bold block mb-1">
-                Multer File Upload
+                Product Image Upload
               </span>
               <h2 className="font-serif text-2xl font-normal text-mocha-950">
                 Upload Product Image
               </h2>
               <p className="text-xs text-mocha-500 font-sans mt-0.5">
-                Upload is handled by <strong>Multer</strong> on the Express server. Files are saved to <code className="bg-mocha-100 px-1 rounded text-[10px]">public/uploads/</code>. JWT auth is required.
+                Upload high-resolution images for catalog products. Supports JPEG, PNG, WebP, and GIF up to 5MB.
               </p>
             </div>
 
@@ -902,19 +902,6 @@ export default function Admin() {
                 ))}
               </div>
             )}
-
-            {/* Tech explanation */}
-            <div className="bg-mocha-50 rounded-2xl p-4 space-y-2 border border-mocha-100">
-              <p className="text-[10px] font-mono uppercase tracking-wider text-mocha-500 font-bold">How Multer Works Here</p>
-              <div className="space-y-1 text-[10px] font-mono text-mocha-600">
-                <p>① React sends <code className="bg-mocha-200 px-1 rounded">multipart/form-data</code> via axios</p>
-                <p>② JWT Bearer token auto-attached by Axios interceptor</p>
-                <p>③ Express <code className="bg-mocha-200 px-1 rounded">verifyToken</code> middleware validates JWT</p>
-                <p>④ Multer validates MIME type via <code className="bg-mocha-200 px-1 rounded">/^image\/(jpeg|png|webp)$/</code></p>
-                <p>⑤ File saved to <code className="bg-mocha-200 px-1 rounded">public/uploads/</code> with unique timestamp name</p>
-                <p>⑥ Server returns public URL for use in product listings</p>
-              </div>
-            </div>
           </div>
         </div>
       )}
