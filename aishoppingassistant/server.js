@@ -1,18 +1,4 @@
-/**
- * ShopAI Express Backend Server
- *
- * Full Stack Architecture:
- * 1) MongoDB + Mongoose  — Database connection, schemas, queries, validations, and auto-seeding
- * 2) NodeJS + ExpressJS  — Robust REST API framework, modular routers, middleware chain
- * 3) Authentication      — Bcrypt password hashing, regular expressions validation, demo accounts
- * 4) JWT (JSON Web Token)— Stateless session management, verifyToken, and role-based access control
- * 5) Multer              — Multipart form-data handling, regex MIME type check, static file serving
- * 6) React JS            — Integrated with luxury frontend UI
- */
-
-import express from 'express';
-import cors from 'cors';
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
@@ -29,16 +15,13 @@ import productRoutes from './server/routes/product.routes.js';
 import orderRoutes from './server/routes/order.routes.js';
 import uploadRoutes from './server/routes/upload.routes.js';
 
-// Load environment variables from .env
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ─── 1. Express App Initialization ────────────────────────────────────────────
 const app = express();
 
-// ─── 2. EventEmitter (Store Event Bus) ─────────────────────────────────────────
 class StoreEventEmitter extends EventEmitter {}
 export const storeEvents = new StoreEventEmitter();
 
@@ -54,9 +37,6 @@ storeEvents.on('user:registered', (email) => {
   console.log(`[EVENT] 👤 User registered: ${email}`);
 });
 
-// ─── 3. Core Middleware Chain ──────────────────────────────────────────────────
-
-// CORS — support Vite dev servers and production
 const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://localhost:5174',
@@ -89,30 +69,25 @@ app.use(
   })
 );
 
-// Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Request logger middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Serve static uploads
 const uploadsPath = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsPath));
 
-// Optionally serve built React dist if available
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 }
 
-// ─── 4. Health Check Endpoint ──────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   const dbConnected = isDatabaseConnected();
   res.status(200).json({
@@ -136,17 +111,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ─── 5. Mount Modular Express Routers ─────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// ─── 6. Global Error Handler Middleware ────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[Server Error]', err.message);
 
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map((val) => val.message);
     return res.status(400).json({
@@ -156,7 +128,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Mongoose duplicate key error (code 11000)
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue || {})[0] || 'field';
     return res.status(409).json({
@@ -166,7 +137,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({ success: false, message: 'Invalid authentication token.' });
   }
@@ -177,7 +147,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ─── 7. 404 Handler for Unmatched API Routes ──────────────────────────────────
 app.use('/api', (req, res) => {
   res.status(404).json({
     success: false,
@@ -185,7 +154,6 @@ app.use('/api', (req, res) => {
   });
 });
 
-// For any non-API routes, serve React index.html if dist exists
 app.use((req, res, next) => {
   if (req.method === 'GET') {
     const indexPath = path.join(distPath, 'index.html');
@@ -196,7 +164,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── 8. Start Server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
 export async function startServer() {
@@ -204,7 +171,6 @@ export async function startServer() {
     throw new Error('JWT_SECRET must be set to a unique secret of at least 32 characters in .env');
   }
 
-  // Connect to MongoDB (with graceful fallback if mongod is not yet running)
   await connectDatabase();
 
   return new Promise((resolve) => {
