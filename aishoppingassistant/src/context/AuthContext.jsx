@@ -12,6 +12,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { jwtDecode } from 'jwt-decode';
 import { useNotification } from './NotificationContext';
 import { loginUserAPI, registerUserAPI, getMeAPI } from '../services/api';
+import { loginUserAPI, registerUserAPI, getMeAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -101,14 +102,14 @@ export function AuthProvider({ children }) {
           totalAmount: 2499,
           items: [
             { id: 4, name: "AeroBeat Headphones", price: 2499, quantity: 1, category: "Electronics", image: "/images/aerobeat.jpg" }
+            { id: 4, name: "AeroBeat Headphones", price: 2499, quantity: 1, category: "Electronics", image: "/images/aerobeat.jpg" }
           ],
+          shippingAddress: { fullName: 'Alex Johnson', phone: '9876543210', street: '42 Orchid Blossom Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
           shippingAddress: { fullName: 'Alex Johnson', phone: '9876543210', street: '42 Orchid Blossom Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
           paymentMethod: 'UPI'
         }
       ];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
   // Persist orders
@@ -171,6 +172,7 @@ export function AuthProvider({ children }) {
   // ─── USER LOGIN: Real User with JWT & Bcrypt ──────────────────────────────
   const login = useCallback(async (email, password) => {
     if (!email || !password) {
+      showToast('Please enter both email and password.', 'error');
       showToast('Please enter both email and password.', 'error');
       return false;
     }
@@ -280,7 +282,17 @@ export function AuthProvider({ children }) {
     setCurrentUser(null);
     showToast('You have been logged out.', 'info');
   }, [showToast]);
+  }, [showToast]);
 
+  // ─── UPDATE PROFILE ───────────────────────────────────────────────────────
+  const updateProfile = useCallback((data) => {
+    setCurrentUser((prev) => {
+      const updated = { ...prev, ...data };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    showToast('Profile updated successfully.', 'success');
+  }, [showToast]);
   // ─── UPDATE PROFILE ───────────────────────────────────────────────────────
   const updateProfile = useCallback((data) => {
     setCurrentUser((prev) => {
@@ -293,14 +305,18 @@ export function AuthProvider({ children }) {
 
   // ─── PLACE ORDER ──────────────────────────────────────────────────────────
   const placeOrder = useCallback((orderDetails) => {
+  // ─── PLACE ORDER ──────────────────────────────────────────────────────────
+  const placeOrder = useCallback((orderDetails) => {
     const newOrder = {
       id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
       createdAt: new Date().toISOString(),
       status: 'Confirmed',
       estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       ...orderDetails,
+      ...orderDetails,
     };
 
+    setOrders((prev) => [newOrder, ...prev]);
     setOrders((prev) => [newOrder, ...prev]);
 
     triggerMobilePush({
@@ -309,11 +325,17 @@ export function AuthProvider({ children }) {
       type: 'order',
       link: '/orders',
       badgeText: 'Order Tracking',
+      badgeText: 'Order Tracking',
     });
 
     return newOrder;
   }, [triggerMobilePush]);
+  }, [triggerMobilePush]);
 
+  // ─── UPDATE ORDER STATUS (Admin) ──────────────────────────────────────────
+  const updateOrderStatus = useCallback((orderId, newStatus) => {
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
   // ─── UPDATE ORDER STATUS (Admin) ──────────────────────────────────────────
   const updateOrderStatus = useCallback((orderId, newStatus) => {
     setOrders((prev) =>
@@ -326,8 +348,11 @@ export function AuthProvider({ children }) {
       type: 'order',
       link: '/orders',
       badgeText: 'Live Tracking',
+      badgeText: 'Live Tracking',
     });
 
+    showToast(`Order #${orderId} status updated to ${newStatus}!`, 'success');
+  }, [showToast, triggerMobilePush]);
     showToast(`Order #${orderId} status updated to ${newStatus}!`, 'success');
   }, [showToast, triggerMobilePush]);
 
@@ -349,6 +374,7 @@ export function AuthProvider({ children }) {
         updateProfile,
         orders,
         placeOrder,
+        updateOrderStatus,
         updateOrderStatus,
       }}
     >

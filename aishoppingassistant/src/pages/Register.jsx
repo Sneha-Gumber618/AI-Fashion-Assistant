@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -48,7 +49,48 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  // ─── Live Password Strength Calculation ─────────────────────────────────────
+  const passwordRules = useMemo(() => getPasswordRules(password), [password]);
+  const strength = useMemo(() => getStrengthLevel(passwordRules), [passwordRules]);
+  const isPasswordValid = passwordRules.every((r) => r.met);
+
+  // ─── Field-level validation with Regex ──────────────────────────────────────
+  function validateField(field, value) {
+    switch (field) {
+      case 'name':
+        if (!value.trim()) return 'Name is required.';
+        if (!REGEX.name.test(value.trim())) return 'Name must be 2–50 letters, spaces, or hyphens only.';
+        return '';
+      case 'email':
+        if (!value.trim()) return 'Email is required.';
+        if (!REGEX.email.test(value.trim())) return 'Please enter a valid email address.';
+        return '';
+      case 'password':
+        if (!value) return 'Password is required.';
+        if (!isPasswordValid) return 'Password does not meet all requirements.';
+        return '';
+      case 'confirmPassword':
+        if (!value) return 'Please confirm your password.';
+        if (value !== password) return 'Passwords do not match.';
+        return '';
+      default:
+        return '';
+    }
+  }
+
+  function handleBlur(field, value) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  }
+
+  // ─── Form Submit ─────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
@@ -102,6 +144,18 @@ export default function Register() {
 
     if (Object.values(newErrors).some((e) => e)) {
       showToast('Please fix the errors before submitting.', 'warning');
+    // Run all validations before submit
+    const newErrors = {
+      name: validateField('name', name),
+      email: validateField('email', email),
+      password: validateField('password', password),
+      confirmPassword: validateField('confirmPassword', confirmPassword),
+    };
+    setErrors(newErrors);
+    setTouched({ name: true, email: true, password: true, confirmPassword: true });
+
+    if (Object.values(newErrors).some((e) => e)) {
+      showToast('Please fix the errors before submitting.', 'warning');
       return;
     }
 
@@ -120,8 +174,23 @@ export default function Register() {
         ? 'border-green-400 focus:border-green-500'
         : 'border-mocha-200 focus:border-blush-500'
     }`;
+    const ok = await register(name.trim(), email.trim(), password);
+    setLoading(false);
+
+    if (ok) navigate('/');
+  };
+
+  const inputClass = (field) =>
+    `w-full text-xs pl-10 pr-10 py-3 rounded-full border font-sans bg-[#FAF7F2] focus:outline-none transition-colors ${
+      touched[field] && errors[field]
+        ? 'border-red-400 focus:border-red-500'
+        : touched[field] && !errors[field]
+        ? 'border-green-400 focus:border-green-500'
+        : 'border-mocha-200 focus:border-blush-500'
+    }`;
 
   return (
+    <div className="max-w-md mx-auto px-4 py-16 space-y-6 animate-fade-in">
     <div className="max-w-md mx-auto px-4 py-16 space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
         <div className="w-12 h-12 rounded-full bg-mocha-900 text-blush-200 flex items-center justify-center mx-auto shadow-md">
@@ -142,6 +211,9 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
           {/* Name */}
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+
+          {/* Name */}
           <div>
             <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
               Full Name
@@ -150,12 +222,15 @@ export default function Register() {
               <User className="w-4 h-4 text-mocha-400 absolute left-3.5 top-3.5 pointer-events-none" />
               <input
                 id="register-name"
+                id="register-name"
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={(e) => handleBlur('name', e.target.value)}
+                onBlur={(e) => handleBlur('name', e.target.value)}
                 placeholder="Priya Sharma"
+                className={inputClass('name')}
                 className={inputClass('name')}
               />
             </div>
@@ -164,8 +239,14 @@ export default function Register() {
                 <XCircle className="w-3 h-3" /> {errors.name}
               </p>
             )}
+            {touched.name && errors.name && (
+              <p className="text-[10px] text-red-500 mt-1 ml-2 flex items-center gap-1">
+                <XCircle className="w-3 h-3" /> {errors.name}
+              </p>
+            )}
           </div>
 
+          {/* Email */}
           {/* Email */}
           <div>
             <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
@@ -175,12 +256,15 @@ export default function Register() {
               <Mail className="w-4 h-4 text-mocha-400 absolute left-3.5 top-3.5 pointer-events-none" />
               <input
                 id="register-email"
+                id="register-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={(e) => handleBlur('email', e.target.value)}
+                onBlur={(e) => handleBlur('email', e.target.value)}
                 placeholder="name@example.com"
+                className={inputClass('email')}
                 className={inputClass('email')}
               />
             </div>
@@ -189,11 +273,18 @@ export default function Register() {
                 <XCircle className="w-3 h-3" /> {errors.email}
               </p>
             )}
+            {touched.email && errors.email && (
+              <p className="text-[10px] text-red-500 mt-1 ml-2 flex items-center gap-1">
+                <XCircle className="w-3 h-3" /> {errors.email}
+              </p>
+            )}
           </div>
 
           {/* Password */}
+          {/* Password */}
           <div>
             <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
+              Password
               Password
             </label>
             <div className="relative">
@@ -206,7 +297,17 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={(e) => handleBlur('password', e.target.value)}
+                onBlur={(e) => handleBlur('password', e.target.value)}
                 placeholder="••••••••"
+                className={inputClass('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-mocha-400 hover:text-mocha-600 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
                 className={inputClass('password')}
               />
               <button
@@ -258,8 +359,50 @@ export default function Register() {
                 </div>
               </div>
             )}
+
+            {/* ── Password Strength Meter ── */}
+            {password.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {/* Strength bar */}
+                <div className="flex gap-1">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="h-1 flex-1 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor:
+                          i <= strength.level ? strength.color : '#e5e7eb',
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] font-mono" style={{ color: strength.color }}>
+                  {strength.label}
+                </p>
+
+                {/* Rule checklist */}
+                <div className="space-y-1">
+                  {passwordRules.map((rule) => (
+                    <div key={rule.label} className="flex items-center gap-1.5">
+                      {rule.met ? (
+                        <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                      )}
+                      <span
+                        className="text-[10px] font-mono"
+                        style={{ color: rule.met ? '#22c55e' : '#9ca3af' }}
+                      >
+                        {rule.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Confirm Password */}
           {/* Confirm Password */}
           <div>
             <label className="block text-[11px] font-mono uppercase tracking-wider text-mocha-600 mb-1">
@@ -270,11 +413,23 @@ export default function Register() {
               <input
                 id="register-confirm-password"
                 type={showConfirmPassword ? 'text' : 'password'}
+                id="register-confirm-password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={(e) => handleBlur('confirmPassword', e.target.value)}
+                onBlur={(e) => handleBlur('confirmPassword', e.target.value)}
                 placeholder="••••••••"
+                className={inputClass('confirmPassword')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3.5 top-3.5 text-mocha-400 hover:text-mocha-600 transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
                 className={inputClass('confirmPassword')}
               />
               <button
@@ -295,14 +450,37 @@ export default function Register() {
                 <CheckCircle2 className="w-3 h-3" /> Passwords match!
               </p>
             )}
+            {touched.confirmPassword && errors.confirmPassword && (
+              <p className="text-[10px] text-red-500 mt-1 ml-2 flex items-center gap-1">
+                <XCircle className="w-3 h-3" /> {errors.confirmPassword}
+              </p>
+            )}
+            {touched.confirmPassword && !errors.confirmPassword && confirmPassword && (
+              <p className="text-[10px] text-green-500 mt-1 ml-2 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Passwords match!
+              </p>
+            )}
           </div>
 
           <button
             id="register-submit"
+            id="register-submit"
             type="submit"
             disabled={loading}
             className="w-full py-4 rounded-full bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] font-semibold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-full bg-mocha-900 hover:bg-blush-600 text-[#FAF7F2] font-semibold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Creating Profile...
+              </>
+            ) : (
+              <>
+                Complete Atelier Registration
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
             {loading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

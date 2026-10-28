@@ -8,13 +8,29 @@
  * - Graceful fallback to local data when server is unreachable
  */
 
+/**
+ * API Service — Axios Instance
+ * Handles all HTTP requests to the ShopAI Express backend.
+ *
+ * Features:
+ * - JWT auto-attach on every request via request interceptor
+ * - 401 Unauthorized auto-logout via response interceptor
+ * - Graceful fallback to local data when server is unreachable
+ */
+
 import axios from 'axios';
 import { INITIAL_PRODUCTS } from '../data/products';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // ─── Main API Instance (Products, Orders, etc.) ────────────────────────────────
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// ─── Main API Instance (Products, Orders, etc.) ────────────────────────────────
 const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 6000,
+  headers: { 'Content-Type': 'application/json' },
   baseURL: BASE_URL,
   timeout: 6000,
   headers: { 'Content-Type': 'application/json' },
@@ -127,6 +143,7 @@ export async function fetchProductsFromAPI(params = {}) {
     return response.data;
   } catch (err) {
     // Client-side fallback with a realistic 300ms network delay
+    // Client-side fallback with a realistic 300ms network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     let items = [...INITIAL_PRODUCTS];
@@ -154,12 +171,23 @@ export async function fetchProductsFromAPI(params = {}) {
     else if (params.sort === 'price-high') items.sort((a, b) => b.price - a.price);
     else if (params.sort === 'rating') items.sort((a, b) => b.rating - a.rating);
     else if (params.sort === 'newest') items.sort((a, b) => b.id - a.id);
+    if (params.minPrice) items = items.filter((p) => p.price >= Number(params.minPrice));
+    if (params.maxPrice) items = items.filter((p) => p.price <= Number(params.maxPrice));
+    if (params.minRating) items = items.filter((p) => p.rating >= Number(params.minRating));
+    if (params.inStockOnly) items = items.filter((p) => p.inStock);
 
+    if (params.sort === 'price-low') items.sort((a, b) => a.price - b.price);
+    else if (params.sort === 'price-high') items.sort((a, b) => b.price - a.price);
+    else if (params.sort === 'rating') items.sort((a, b) => b.rating - a.rating);
+    else if (params.sort === 'newest') items.sort((a, b) => b.id - a.id);
+
+    return { success: true, count: items.length, data: items, source: 'client_store' };
     return { success: true, count: items.length, data: items, source: 'client_store' };
   }
 }
 
 /**
+ * Fetch a single product by ID.
  * Fetch a single product by ID.
  */
 export async function fetchProductByIdFromAPI(id) {
@@ -174,7 +202,10 @@ export async function fetchProductByIdFromAPI(id) {
         const custom = JSON.parse(localStorage.getItem('shopai_custom_products') || '[]');
         product = custom.find((p) => p.id === Number(id));
       } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
     }
+    if (!product) throw new Error('Product not found');
+    return { success: true, data: product, source: 'client_store' };
     if (!product) throw new Error('Product not found');
     return { success: true, data: product, source: 'client_store' };
   }
